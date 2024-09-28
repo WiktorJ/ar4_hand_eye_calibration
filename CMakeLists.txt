@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(ar_hand_eye)
+project(ar4_hand_eye_calibration)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)
