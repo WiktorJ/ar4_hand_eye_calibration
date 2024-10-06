@@ -12,6 +12,7 @@ install(DIRECTORY launch config
 install (PROGRAMS 
   scripts/calibration_aruco_publisher.py
   scripts/follow_aruco_marker.py
+  scripts/handeye_publisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -34,7 +34,8 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([
             os.path.join(get_package_share_directory("realsense2_camera"),
                          "launch", "rs_launch.py")
-        ]))
+        ])
+    )
 
     aruco_params = os.path.join(get_package_share_directory("ar4_hand_eye_calibration"),
                                 "config", "aruco_parameters.yaml")
@@ -42,12 +43,14 @@ def generate_launch_description():
                                   executable='aruco_node',
                                   parameters=[aruco_params])
 
-    calibration_tf_publisher = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            os.path.join(get_package_share_directory("easy_handeye2"),
-                         "launch", "publish.launch.py")
-        ]),
-        launch_arguments={"name": "ar4_calibration"}.items())
+    hand_eye_tf_publisher = Node(
+        package="ar4_hand_eye_calibration",
+        executable="handeye_publisher.py",
+        name="handeye_publisher",
+        parameters=[{
+            "name": "ar4_calibration"
+        }],
+    )
 
     robot_description_content = Command([
         PathJoinSubstitution([FindExecutable(name="xacro")]),
@@ -167,6 +170,7 @@ def generate_launch_description():
                                          launch_arguments=ar_moveit_args)
 
     return LaunchDescription([
-        ar_model_arg, realsense, aruco_recognition_node,
-        calibration_tf_publisher, follow_aruco_node, ar_moveit
+        ar_model_arg, realsense, hand_eye_tf_publisher, 
+        aruco_recognition_node, follow_aruco_node, 
+        ar_moveit
     ])

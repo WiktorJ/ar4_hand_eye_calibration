@@ -44,7 +44,7 @@ def generate_launch_description():
         "calibration_type": "eye_on_base",
         "robot_base_frame": "base_link",
         "robot_effector_frame": "ee_link",
-        "tracking_base_frame": "camera_color_frame",
+        "tracking_base_frame": "camera_color_optical_frame",
         "tracking_marker_frame": "calibration_aruco",
     }
 

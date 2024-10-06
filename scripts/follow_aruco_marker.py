@@ -23,7 +23,7 @@ class ArucoMarkerFollower(Node):
     def __init__(self, moveit: MoveItPy):
         super().__init__("aruco_marker_follower")
         self.logger = self.get_logger()
-        # self.get_all_params()
+
         self.moveit = moveit
         self.arm = self.moveit.get_planning_component("ar_manipulator")
 
@@ -38,19 +38,11 @@ class ArucoMarkerFollower(Node):
         self.pose_pub = self.create_publisher(PoseStamped, "/cal_marker_pose",
                                               1)
 
-        self.flipped_pose_pub = self.create_publisher(
-            PoseStamped, "/flipped_cal_marker_pose", 1)
+        self.target_pose_pub = self.create_publisher(
+            PoseStamped, "/follow_aruco_target_pose", 1)
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
         self._prev_marker_pose = None
-
-    def get_all_params(self):
-        params = self.get_parameters(
-            ["/robot_description", "/robot_description_semantic"])
-        param_dict = {}
-        for param in params:
-            param_dict[param.name] = param.value
-        print(param_dict)
 
     def handle_aruco_markers(self, msg: ArucoMarkers):
         cal_marker_pose = None
@@ -78,7 +70,7 @@ class ArucoMarkerFollower(Node):
         # get pose in robot base frame
         try:
             transformed_pose = self._transform_pose(cal_marker_pose,
-                                                    "camera_color_frame",
+                                                    "camera_color_optical_frame",
                                                     "base_link")
         except tf2_ros.LookupException as e:
             self.logger.error(f"Error transforming pose: {e}")
@@ -105,7 +97,6 @@ class ArucoMarkerFollower(Node):
         # Get the transform from source frame to target frame
         transform = self.tf_buffer.lookup_transform(target_frame, source_frame,
                                                     Time())
-
         # Transform the pose
         transformed_pose = do_transform_pose(pose, transform)
         # publish pose
@@ -114,26 +105,13 @@ class ArucoMarkerFollower(Node):
         stamped_pose.pose = transformed_pose
         self.pose_pub.publish(stamped_pose)
 
-        # first flip the pose up side down
-        quat = [
-            transformed_pose.orientation.w,
-            transformed_pose.orientation.x,
-            transformed_pose.orientation.y,
-            transformed_pose.orientation.z,
-        ]
-        x_180_deg_quat = [0, 1, 0, 0]
-        flipped_quat = transforms3d.quaternions.qmult(quat, x_180_deg_quat)
-        transformed_pose.orientation.w = flipped_quat[0]
-        transformed_pose.orientation.x = flipped_quat[1]
-        transformed_pose.orientation.y = flipped_quat[2]
-        transformed_pose.orientation.z = flipped_quat[3]
-
-        transformed_pose.position.z += 0.09
+        pose.position.z += 0.05
+        transformed_pose = do_transform_pose(pose, transform)
 
         stamped_pose = PoseStamped()
         stamped_pose.header.frame_id = target_frame
         stamped_pose.pose = transformed_pose
-        self.flipped_pose_pub.publish(stamped_pose)
+        self.target_pose_pub.publish(stamped_pose)
         return transformed_pose
 
     def _plan_and_execute(self):
