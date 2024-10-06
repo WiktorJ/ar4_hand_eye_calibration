@@ -48,7 +48,7 @@ def generate_launch_description():
         executable="handeye_publisher.py",
         name="handeye_publisher",
         parameters=[{
-            "name": "ar4_calibration"
+            "calibration_name": "ar4_calibration"
         }],
     )
 

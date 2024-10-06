@@ -49,8 +49,11 @@ class HandeyePublisher(Node):
     def __init__(self):
         super().__init__('handeye_publisher')
 
-        self.declare_parameter('name', descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING))
-        name = self.get_parameter('name').get_parameter_value().string_value
+        calibration_name_p = self.declare_parameter(
+            'calibration_name', 
+            descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+        name = calibration_name_p.get_parameter_value().string_value
 
         self.get_logger().info(f'Loading the calibration with name {name}')
         self.calibration = load_calibration(name)
@@ -79,12 +82,12 @@ class HandeyePublisher(Node):
     def compute_transform(self):
         try:
             color_to_link_tf = self.tf_buffer.lookup_transform(
-                target_frame="camera_color_optical_frame",
+                target_frame=self.calibration.parameters.tracking_base_frame,
                 source_frame="camera_link",
                 time=Time()
             )
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            self.get_logger().error('Could not get transform from camera_color_optical_frame to camera_link')
+            self.get_logger().error('Could not get transform from tracking_base_frame to camera_link')
             return
 
         base_to_color_mat = transform_to_matrix(self.calibration.transform)

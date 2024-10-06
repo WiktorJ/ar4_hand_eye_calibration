@@ -3,6 +3,7 @@ import rclpy
 from rclpy.node import Node
 
 from geometry_msgs.msg import TransformStamped
+from rclpy.node import ParameterType, ParameterDescriptor
 from ros2_aruco_interfaces.msg import ArucoMarkers
 from tf2_ros import TransformBroadcaster
 
@@ -14,6 +15,17 @@ class CalibrationArucoPublisher(Node):
 
     def __init__(self):
         super().__init__("calibration_aruco_publisher")
+
+        tracking_base_frame_p = self.declare_parameter(
+            'tracking_base_frame', 
+            descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+        self.tracking_base_frame = tracking_base_frame_p.get_parameter_value().string_value
+        tracking_marker_frame_p = self.declare_parameter(
+            'tracking_marker_frame', 
+            descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
+        )
+        self.tracking_marker_frame = tracking_marker_frame_p.get_parameter_value().string_value
 
         # ID of the aruco marker mounted on the robot
         self.marker_id = self.declare_parameter(
@@ -37,8 +49,8 @@ class CalibrationArucoPublisher(Node):
 
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
-        t.header.frame_id = "/camera_color_optical_frame"
-        t.child_frame_id = "/calibration_aruco"
+        t.header.frame_id = self.tracking_base_frame
+        t.child_frame_id = self.tracking_marker_frame
 
         t.transform.translation.x = cal_marker_pose.position.x
         t.transform.translation.y = cal_marker_pose.position.y

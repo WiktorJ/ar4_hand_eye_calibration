@@ -32,13 +32,6 @@ def generate_launch_description():
                                   executable='aruco_node',
                                   parameters=[aruco_params])
 
-    calibration_aruco_publisher = Node(
-        package="ar4_hand_eye_calibration",
-        executable="calibration_aruco_publisher.py",
-        name="calibration_aruco_publisher",
-        output="screen",
-    )
-
     calibration_args = {
         "name": "ar4_calibration",
         "calibration_type": "eye_on_base",
@@ -47,6 +40,18 @@ def generate_launch_description():
         "tracking_base_frame": "camera_color_optical_frame",
         "tracking_marker_frame": "calibration_aruco",
     }
+
+    calibration_aruco_publisher = Node(
+        package="ar4_hand_eye_calibration",
+        executable="calibration_aruco_publisher.py",
+        name="calibration_aruco_publisher",
+        output="screen",
+        parameters=[{
+            "tracking_base_frame": calibration_args["tracking_base_frame"],
+            "tracking_marker_frame": calibration_args["tracking_marker_frame"],
+            "marker_id": 1
+        }],
+    )
 
     easy_handeye2 = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
