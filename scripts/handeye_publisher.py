@@ -50,7 +50,8 @@ class HandeyePublisher(Node):
         super().__init__('handeye_publisher')
 
         calibration_name_p = self.declare_parameter(
-            'calibration_name', 
+            'calibration_name',
+            '',
             descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
         )
         name = calibration_name_p.get_parameter_value().string_value

@@ -2,7 +2,7 @@
 
 Performs hand-eye calibration between a camera and the Annin Robotics AR4 robotic arm,
 and validates calibration results. An Intel RealSense camera is used as an example,
-but any camera can be substituted. Tested with ROS 2 Iron on Ubuntu 22.04.
+but any camera can be substituted. Tested with ROS 2 Jazzy on Ubuntu 24.
 
 [![Hand-Eye Calibration Demo](http://img.youtube.com/vi/w3tWKYnLL98/0.jpg)](https://youtu.be/w3tWKYnLL98)
 
@@ -45,15 +45,15 @@ sudo apt install ros-iron-librealsense2* ros-iron-realsense2-*
 Install dependencies of imported repos:
 
 ```bash
-sudo apt update && rosdep install --from-paths . --ignore-src -y
+sudo apt update && rosdep install --from-paths src --ignore-src -y
 ```
 
 ## Calibrate
 
-In one terminal, launch the hardware interface without including the gripper:
+In one terminal, launch the AR4 driver without including the gripper:
 
 ```bash
-ros2 launch ar_hardware_interface ar_hardware.launch.py calibrate:=True include_gripper:=False
+ros2 launch annin_ar4_driver driver.launch.py calibrate:=True include_gripper:=False
 ```
 
 In another terminal, launch programs needed for calibration:
@@ -69,10 +69,10 @@ can save and exit all programs.
 
 ## Validate
 
-In one terminal, launch the hardware interface without including the gripper:
+In one terminal, launch the AR4 driver without including the gripper:
 
 ```bash
-ros2 launch ar_hardware_interface ar_hardware.launch.py calibrate:=True include_gripper:=False
+ros2 launch annin_ar4_driver driver.launch.py calibrate:=True include_gripper:=False
 ```
 
 In another terminal, launch programs needed for validation:

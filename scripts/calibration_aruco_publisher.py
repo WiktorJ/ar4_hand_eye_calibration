@@ -17,12 +17,14 @@ class CalibrationArucoPublisher(Node):
         super().__init__("calibration_aruco_publisher")
 
         tracking_base_frame_p = self.declare_parameter(
-            'tracking_base_frame', 
+            'tracking_base_frame',
+            value="",
             descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
         )
         self.tracking_base_frame = tracking_base_frame_p.get_parameter_value().string_value
         tracking_marker_frame_p = self.declare_parameter(
-            'tracking_marker_frame', 
+            'tracking_marker_frame',
+            value="",
             descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
         )
         self.tracking_marker_frame = tracking_marker_frame_p.get_parameter_value().string_value

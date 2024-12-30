@@ -1,31 +1,41 @@
 #!/usr/bin/env python3
 """
-A script to follow an aruco marker with a robot arm using MoveItPy.
+A script to follow an aruco marker with a robot arm using PyMoveit2.
 """
-
-# generic ros libraries
 import rclpy
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.time import Time
 
-# moveit python library
 import tf2_ros
-import transforms3d
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Pose
-from moveit.planning import MoveItPy
 from ros2_aruco_interfaces.msg import ArucoMarkers
 from tf2_geometry_msgs import do_transform_pose
+from pymoveit2 import MoveIt2
 
 
 class ArucoMarkerFollower(Node):
 
-    def __init__(self, moveit: MoveItPy):
+    def __init__(self):
         super().__init__("aruco_marker_follower")
         self.logger = self.get_logger()
 
-        self.moveit = moveit
-        self.arm = self.moveit.get_planning_component("ar_manipulator")
+        self.arm_joint_names = [
+            "joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6"
+        ]
+        self.moveit2 = MoveIt2(
+            node=self,
+            joint_names=self.arm_joint_names,
+            base_link_name="base_link",
+            end_effector_name="link_6",
+            group_name="ar_manipulator",
+            callback_group=ReentrantCallbackGroup(),
+        )
+        self.moveit2.planner_id = "RRTConnectkConfigDefault"
+        self.moveit2.max_velocity = 1.0
+        self.moveit2.max_acceleration = 1.0
 
         # ID of the aruco marker mounted on the robot
         self.marker_id = self.declare_parameter(
@@ -50,6 +60,8 @@ class ArucoMarkerFollower(Node):
             if marker_id == self.marker_id:
                 cal_marker_pose = msg.poses[i]
                 break
+            else:
+                self.logger.info(f"Detected unexpected marker with ID: {marker_id}")
 
         if cal_marker_pose is None:
             return
@@ -77,20 +89,7 @@ class ArucoMarkerFollower(Node):
             return
 
         self.logger.info(f"Following marker at pose: {transformed_pose}")
-
-        pose_goal = PoseStamped()
-        pose_goal.header.frame_id = "base_link"
-        pose_goal.pose = transformed_pose
-
-        # set plan start state to current state
-        self.arm.set_start_state_to_current_state()
-
-        # set pose goal with PoseStamped message
-        self.arm.set_goal_state(pose_stamped_msg=pose_goal,
-                                pose_link="ee_link")
-
-        # plan to goal
-        self._plan_and_execute()
+        self.move_to(transformed_pose)
 
     def _transform_pose(self, pose: Pose, source_frame,
                         target_frame: str) -> Pose:
@@ -114,27 +113,22 @@ class ArucoMarkerFollower(Node):
         self.target_pose_pub.publish(stamped_pose)
         return transformed_pose
 
-    def _plan_and_execute(self):
-        """Helper function to plan and execute a motion."""
-        # plan to goal
-        self.logger.info("Planning trajectory")
-        plan_result = self.arm.plan()
+    def move_to(self, msg: Pose):
+        pose_goal = PoseStamped()
+        pose_goal.header.frame_id = "base_link"
+        pose_goal.pose = msg
 
-        # execute the plan
-        if plan_result:
-            self.logger.info("Executing plan")
-            robot_trajectory = plan_result.trajectory
-            self.moveit.execute(robot_trajectory, controllers=[])
-        else:
-            self.logger.error("Planning failed")
+        self.moveit2.move_to_pose(pose=pose_goal)
+        self.moveit2.wait_until_executed()
 
 
 def main():
     rclpy.init()
-    moveit = MoveItPy(node_name="moveit_py")
-    node = ArucoMarkerFollower(moveit)
+    node = ArucoMarkerFollower()
+    executor = MultiThreadedExecutor(4)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     rclpy.shutdown()
