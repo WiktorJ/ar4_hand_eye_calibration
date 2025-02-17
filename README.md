@@ -13,6 +13,11 @@ The core calibration procedure uses [easy_handeye2](https://github.com/marcoespo
 Print an Aruco marker and attach it to the end of J6. Aruco marker can be printed using
 [ros2_aruco](https://github.com/JMU-ROBOTICS-VIVA/ros2_aruco?tab=readme-ov-file#generating-marker-images).
 
+Note that the marker needs to be aligned with `ee_link` as shown in the picture below.
+Aruco marker pose can be visualized using `ros2 run ar4_hand_eye_calibration visualize_aruco_marker.py`
+
+![aruco_marker_alignment](./resources/aruco_marker_alignment.png)
+
 Verify that the Aruco marker parameters in `config/aruco_parameters.yaml` is correct for
 your marker.
 
@@ -45,7 +50,7 @@ sudo apt install ros-iron-librealsense2* ros-iron-realsense2-*
 Install dependencies of imported repos:
 
 ```bash
-sudo apt update && rosdep install --from-paths src --ignore-src -y
+sudo apt update && rosdep install --from-paths . --ignore-src -y
 ```
 
 ## Calibrate
