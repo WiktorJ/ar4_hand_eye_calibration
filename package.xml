@@ -3,7 +3,7 @@
   <name>ar4_hand_eye_calibration</name>
   <version>0.1.0</version>
   <description>
-    Example hand eye calibration between an Intel Realsense camera and the AR4.
+    Example hand eye calibration between an Depthai OAK-D camera and the AR4.
   </description>
   <license>MIT</license>
 
@@ -24,7 +24,7 @@
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-transforms3d</exec_depend>
   <exec_depend>ros2_aruco</exec_depend>
-  <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>depthai_ros_driver</exec_depend>
   <exec_depend>tf_transformations</exec_depend>
 
   <export>

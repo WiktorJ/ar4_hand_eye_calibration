@@ -25,13 +25,13 @@ def generate_launch_description():
         description="Model of AR4",
     )
 
-    realsense = IncludeLaunchDescription(
+    depthai_camera = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [
                 os.path.join(
-                    get_package_share_directory("realsense2_camera"),
+                    get_package_share_directory("depthai_ros_driver"),
                     "launch",
-                    "rs_launch.py",
+                    "camera.launch.py",
                 )
             ]
         )
@@ -84,7 +84,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             ar_model_arg,
-            realsense,
+            depthai_camera,
             hand_eye_tf_publisher,
             aruco_recognition_node,
             follow_aruco_node,

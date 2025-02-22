@@ -8,13 +8,13 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 
 def generate_launch_description():
-    realsense = IncludeLaunchDescription(
+    depthai_camera = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [
                 os.path.join(
-                    get_package_share_directory("realsense2_camera"),
+                    get_package_share_directory("depthai_ros_driver"),
                     "launch",
-                    "rs_launch.py",
+                    "camera.launch.py",
                 )
             ]
         )
@@ -96,7 +96,7 @@ def generate_launch_description():
     )
 
     ld = LaunchDescription()
-    ld.add_action(realsense)
+    ld.add_action(depthai_camera)
     ld.add_action(static_tf_publisher)
     ld.add_action(ar_moveit)
     ld.add_action(aruco_recognition_node)

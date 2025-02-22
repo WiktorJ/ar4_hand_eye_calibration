@@ -1,7 +1,7 @@
 # AR4 Hand Eye Calibration
 
 Performs hand-eye calibration between a camera and the Annin Robotics AR4 robotic arm,
-and validates calibration results. An Intel RealSense camera is used as an example,
+and validates calibration results. An DepthAI camera is used as an example,
 but any camera can be substituted. Tested with ROS 2 Jazzy on Ubuntu 24.
 
 [![Hand-Eye Calibration Demo](http://img.youtube.com/vi/w3tWKYnLL98/0.jpg)](https://youtu.be/w3tWKYnLL98)
@@ -41,10 +41,10 @@ Import required repos with:
 vcs import . --input ar4_hand_eye_calibration/hand_eye_calibration.repos
 ```
 
-Install the required drivers and ROS 2 nodes for your camera. For example for Intel RealSense:
+Install the required drivers and ROS 2 nodes for your camera. For example for DepthAI:
 
 ```bash
-sudo apt install ros-iron-librealsense2* ros-iron-realsense2-*
+sudo apt install ros-jazzy-depthai-ros
 ```
 
 Install dependencies of imported repos:
