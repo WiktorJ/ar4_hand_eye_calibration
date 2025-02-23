@@ -31,7 +31,7 @@ i.e.
 ```bash
 mkdir -p ~/ar4_ws/src
 cd ~/ar4_ws/src
-git clone https://github.com/ycheng517/ar4_ros_driver
+git clone https://github.com/wiktorj/ar4_ros_driver
 git clone https://github.com/wiktorj/ar4_hand_eye_calibration
 ```
 
