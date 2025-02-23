@@ -107,7 +107,7 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          link_6:
+          cameralink_6:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -196,7 +196,7 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          link_6:
+          cameralink_6:
             Alpha: 1
             Show Axes: false
             Show Trail: false

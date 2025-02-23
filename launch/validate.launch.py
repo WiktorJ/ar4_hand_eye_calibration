@@ -20,7 +20,7 @@ def generate_launch_description():
     ar_model_config = LaunchConfiguration("ar_model")
     ar_model_arg = DeclareLaunchArgument(
         "ar_model",
-        default_value="mk1",
+        default_value="mk3",
         choices=["mk1", "mk2", "mk3"],
         description="Model of AR4",
     )
@@ -34,7 +34,10 @@ def generate_launch_description():
                     "camera.launch.py",
                 )
             ]
-        )
+        ),
+        launch_arguments={
+            'rs_compat': "true",
+        }.items()
     )
 
     aruco_params = os.path.join(
@@ -70,7 +73,8 @@ def generate_launch_description():
         ]
     )
     rviz_config_file = os.path.join(
-        get_package_share_directory("ar4_hand_eye_calibration"), "rviz", "validate.rviz"
+        get_package_share_directory("ar4_hand_eye_calibration"), "rviz",
+        "validate.rviz"
     )
     ar_moveit_args = {
         "include_gripper": "False",

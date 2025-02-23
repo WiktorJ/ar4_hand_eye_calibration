@@ -29,7 +29,7 @@ class ArucoMarkerFollower(Node):
             node=self,
             joint_names=self.arm_joint_names,
             base_link_name="camerabase_link",
-            end_effector_name="link_6",
+            end_effector_name="cameralink_6",
             group_name="ar_manipulator",
             callback_group=ReentrantCallbackGroup(),
         )
