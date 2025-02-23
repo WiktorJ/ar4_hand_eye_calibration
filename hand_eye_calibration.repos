@@ -5,7 +5,7 @@ repositories:
     version: master
   ros2_aruco:
     type: git
-    url: https://github.com/JMU-ROBOTICS-VIVA/ros2_aruco.git
+    url: https://github.com/WiktorJ/ros2_aruco.git
     version: main
   pymoveit2:
     type: git
