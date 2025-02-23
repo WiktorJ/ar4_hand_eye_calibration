@@ -57,8 +57,8 @@ def generate_launch_description():
     calibration_args = {
         "name": "ar4_calibration",
         "calibration_type": "eye_on_base",
-        "robot_base_frame": "base_link",
-        "robot_effector_frame": "ee_link",
+        "robot_base_frame": "camerabase_link",
+        "robot_effector_frame": "cameraee_link",
         "tracking_base_frame": "camera_color_optical_frame",
         "tracking_marker_frame": "calibration_aruco",
     }
@@ -97,6 +97,7 @@ def generate_launch_description():
         executable="static_transform_publisher",
         arguments=["0", "0", "0", "0", "0", "0", "world", "camera_link"],
         output="screen",
+
     )
 
     ld = LaunchDescription()

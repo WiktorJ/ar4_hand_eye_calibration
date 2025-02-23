@@ -28,7 +28,7 @@ class ArucoMarkerFollower(Node):
         self.moveit2 = MoveIt2(
             node=self,
             joint_names=self.arm_joint_names,
-            base_link_name="base_link",
+            base_link_name="camerabase_link",
             end_effector_name="link_6",
             group_name="ar_manipulator",
             callback_group=ReentrantCallbackGroup(),
@@ -83,7 +83,7 @@ class ArucoMarkerFollower(Node):
         try:
             transformed_pose = self._transform_pose(cal_marker_pose,
                                                     "camera_color_optical_frame",
-                                                    "base_link")
+                                                    "camerabase_link")
         except tf2_ros.LookupException as e:
             self.logger.error(f"Error transforming pose: {e}")
             return
@@ -115,7 +115,7 @@ class ArucoMarkerFollower(Node):
 
     def move_to(self, msg: Pose):
         pose_goal = PoseStamped()
-        pose_goal.header.frame_id = "base_link"
+        pose_goal.header.frame_id = "camerabase_link"
         pose_goal.pose = msg
 
         self.moveit2.move_to_pose(pose=pose_goal)

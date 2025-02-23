@@ -14,7 +14,8 @@ Print an Aruco marker and attach it to the end of J6. Aruco marker can be printe
 [ros2_aruco](https://github.com/JMU-ROBOTICS-VIVA/ros2_aruco?tab=readme-ov-file#generating-marker-images).
 
 Note that the marker needs to be aligned with `ee_link` as shown in the picture below.
-Aruco marker pose can be visualized using `ros2 run ar4_hand_eye_calibration visualize_aruco_marker.py`
+Aruco marker pose can be visualized using `ros2 run ar4_hand_eye_calibration visualize_aruco_marker.py` (run
+`ros2 run image_view image_view  image:=/aruco_image` in another terminal to see the image).
 
 ![aruco_marker_alignment](./resources/aruco_marker_alignment.png)
 
