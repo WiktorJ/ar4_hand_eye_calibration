@@ -1,4 +1,7 @@
 # Byte-compiled / optimized / DLL files
+easy_handeye2/
+ros2_aruco/
+pymoveit2/
 .idea/
 __pycache__/
 *.py[cod]
