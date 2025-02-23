@@ -89,3 +89,16 @@ ros2 launch ar4_hand_eye_calibration validate.launch.py
 
 Move an Aruco marker around the camera'a field of view. The robot arm should follow and hover above
 the Aruco marker.
+
+
+# Example Calibration:
+
+Translation
+	x: 0.026390
+	y: -0.207219
+	z: 0.574821)
+Rotation
+	x: -0.260063
+	y: -0.048720
+	z: -0.274176
+	w: 0.924565
