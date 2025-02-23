@@ -17,7 +17,10 @@ def generate_launch_description():
                     "camera.launch.py",
                 )
             ]
-        )
+        ),
+        launch_arguments={
+            'rs_compat': "true",
+        }.items()
     )
 
     ar_moveit_launch = PythonLaunchDescriptionSource(
@@ -68,7 +71,8 @@ def generate_launch_description():
         parameters=[
             {
                 "tracking_base_frame": calibration_args["tracking_base_frame"],
-                "tracking_marker_frame": calibration_args["tracking_marker_frame"],
+                "tracking_marker_frame": calibration_args[
+                    "tracking_marker_frame"],
                 "marker_id": 1,
             }
         ],

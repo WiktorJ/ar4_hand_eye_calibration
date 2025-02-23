@@ -43,6 +43,8 @@ class ArucoPoseEstimator(Node):
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(
             cv2.aruco.DICT_5X5_250)
         self.aruco_params = cv2.aruco.DetectorParameters()
+        self.aruco_detector = cv2.aruco.ArucoDetector(
+            dictionary=self.aruco_dict, detectorParams=self.aruco_params)
 
         # Image publisher
         self.image_publisher = self.create_publisher(Image, '/aruco_image', 10)
@@ -73,8 +75,8 @@ class ArucoPoseEstimator(Node):
             self.get_logger().error(f"Error converting image: {e}")
             return
 
-        corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(
-            cv_image, self.aruco_dict)
+        corners, ids, rejectedImgPoints = self.aruco_detector.detectMarkers(
+            cv_image)
 
         if ids is not None:
             rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
