@@ -79,9 +79,19 @@ class ArucoPoseEstimator(Node):
             cv_image)
 
         if ids is not None:
-            rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
-                corners, 0.1, self.camera_matrix,
-                self.dist_coeffs)  # 0.1 is marker size
+            marker_length = 0.066
+            obj_ponts = [[-marker_length / 2, marker_length / 2, 0],
+                         [marker_length / 2, marker_length / 2, 0],
+                         [marker_length / 2, -marker_length / 2, 0],
+                         [-marker_length / 2, -marker_length / 2, 0],
+                         ]
+
+            valid, rvecs, tvecs = cv2.solvePnP(objectPoints=obj_ponts, imagePoints=corners,
+                         cameraMatrix=self.camera_matrix,
+                         distCoeffs=self.dist_coeffs)
+            # rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
+            #     corners, 0.1, self.camera_matrix,
+            #     self.dist_coeffs)  # 0.1 is marker size
 
             for i in range(len(ids)):
                 cv2.aruco.drawDetectedMarkers(cv_image, corners, ids)
