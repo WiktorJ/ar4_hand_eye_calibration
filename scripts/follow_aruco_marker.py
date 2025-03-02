@@ -23,7 +23,7 @@ class ArucoMarkerFollower(Node):
         self.logger = self.get_logger()
 
         self.arm_joint_names = [
-            "joint_1", "joint_2", "joint_3", "joint_4", "joint_5", "joint_6"
+            "camerajoint_1", "camerajoint_2", "camerajoint_3", "camerajoint_4", "camerajoint_5", "camerajoint_6"
         ]
         self.moveit2 = MoveIt2(
             node=self,
