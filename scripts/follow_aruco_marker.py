@@ -166,10 +166,16 @@ class ArucoMarkerFollower(Node):
                                                     Time())
         # Transform the pose
         transformed_pose = do_transform_pose(pose, transform)
+        tmp_x = transformed_pose.orientation.x
+        tmp_y = transformed_pose.orientation.y
+        tmp_z = transformed_pose.orientation.z
+        transformed_pose.orientation.x = tmp_z
+        transformed_pose.orientation.y = -tmp_x
+        transformed_pose.orientation.z = -tmp_y
+
         # publish pose
         stamped_pose = PoseStamped()
         stamped_pose.header.frame_id = target_frame
-        stamped_pose.header.stamp = self.get_clock().now().to_msg()
         stamped_pose.pose = transformed_pose
         self.pose_pub.publish(stamped_pose)
 
@@ -181,10 +187,15 @@ class ArucoMarkerFollower(Node):
         modified_pose.orientation = pose.orientation
 
         transformed_pose = do_transform_pose(modified_pose, transform)
+        tmp_x = transformed_pose.orientation.x
+        tmp_y = transformed_pose.orientation.y
+        tmp_z = transformed_pose.orientation.z
+        transformed_pose.orientation.x = tmp_z
+        transformed_pose.orientation.y = -tmp_x
+        transformed_pose.orientation.z = -tmp_y
 
         stamped_pose = PoseStamped()
         stamped_pose.header.frame_id = target_frame
-        stamped_pose.header.stamp = self.get_clock().now().to_msg()
         stamped_pose.pose = transformed_pose
         self.target_pose_pub.publish(stamped_pose)
         return transformed_pose
