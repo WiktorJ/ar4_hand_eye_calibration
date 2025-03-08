@@ -23,19 +23,12 @@ class ArucoMarkerFollower(Node):
         self.logger = self.get_logger()
 
         self.arm_joint_names = [
-            "camerajoint_1", "camerajoint_2", "camerajoint_3", "camerajoint_4", "camerajoint_5", "camerajoint_6"
+            "camerajoint_1", "camerajoint_2", "camerajoint_3", "camerajoint_4",
+            "camerajoint_5", "camerajoint_6"
         ]
-        self.moveit2 = MoveIt2(
-            node=self,
-            joint_names=self.arm_joint_names,
-            base_link_name="camerabase_link",
-            end_effector_name="cameralink_6",
-            group_name="ar_manipulator",
-            callback_group=ReentrantCallbackGroup(),
-        )
-        self.moveit2.planner_id = "RRTConnectkConfigDefault"
-        self.moveit2.max_velocity = 1.0
-        self.moveit2.max_acceleration = 1.0
+        self.moveit2 = None
+        self.init_moveit_timer = self.create_timer(3.0,
+                                                   self.initialize_moveit)
 
         # ID of the aruco marker mounted on the robot
         self.marker_id = self.declare_parameter(
@@ -54,42 +47,62 @@ class ArucoMarkerFollower(Node):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
         self._prev_marker_pose = None
 
+    def initialize_moveit(self):
+        self.moveit2 = MoveIt2(
+            node=self,
+            joint_names=self.arm_joint_names,
+            base_link_name="camerabase_link",
+            end_effector_name="cameralink_6",
+            group_name="ar_manipulator",
+            callback_group=ReentrantCallbackGroup(),
+        )
+        self.moveit2.planner_id = "RRTConnectkConfigDefault"
+        self.moveit2.max_velocity = 1.0
+        self.moveit2.max_acceleration = 1.0
+        self.init_moveit_timer.cancel()
+
     def handle_aruco_markers(self, msg: ArucoMarkers):
-        cal_marker_pose = None
-        for i, marker_id in enumerate(msg.marker_ids):
-            if marker_id == self.marker_id:
-                cal_marker_pose = msg.poses[i]
-                break
-            else:
-                self.logger.info(f"Detected unexpected marker with ID: {marker_id}")
+        try:
+            self.logger.info(f"Got new aruco marker: {msg}")
+            cal_marker_pose = None
+            for i, marker_id in enumerate(msg.marker_ids):
+                if marker_id == self.marker_id:
+                    cal_marker_pose = msg.poses[i]
+                    break
+                else:
+                    self.logger.info(
+                        f"Detected unexpected marker with ID: {marker_id}")
 
-        if cal_marker_pose is None:
-            return
-
-        # only start following if the marker pose has changed by at least 2cm
-        if self._prev_marker_pose is not None:
-            if ((cal_marker_pose.position.x -
-                 self._prev_marker_pose.position.x)**2 +
-                (cal_marker_pose.position.y -
-                 self._prev_marker_pose.position.y)**2 +
-                (cal_marker_pose.position.z -
-                 self._prev_marker_pose.position.z)**2 > 0.02**2):
-                self._prev_marker_pose = cal_marker_pose
+            if cal_marker_pose is None:
                 return
 
-        self._prev_marker_pose = cal_marker_pose
+            # only start following if the marker pose has changed by at least 2cm
+            if self._prev_marker_pose is not None:
+                if ((cal_marker_pose.position.x -
+                     self._prev_marker_pose.position.x) ** 2 +
+                        (cal_marker_pose.position.y -
+                         self._prev_marker_pose.position.y) ** 2 +
+                        (cal_marker_pose.position.z -
+                         self._prev_marker_pose.position.z) ** 2 > 0.02 ** 2):
+                    self._prev_marker_pose = cal_marker_pose
+                    return
 
-        # get pose in robot base frame
-        try:
-            transformed_pose = self._transform_pose(cal_marker_pose,
-                                                    "camera_color_optical_frame",
-                                                    "camerabase_link")
-        except tf2_ros.LookupException as e:
-            self.logger.error(f"Error transforming pose: {e}")
-            return
+            self._prev_marker_pose = cal_marker_pose
 
-        self.logger.info(f"Following marker at pose: {transformed_pose}")
-        self.move_to(transformed_pose)
+            # get pose in robot base frame
+            try:
+                transformed_pose = self._transform_pose(cal_marker_pose,
+                                                        "camera_color_optical_frame",
+                                                        "camerabase_link")
+                self.logger.info(
+                    f"Following marker at pose: {transformed_pose}")
+                self.move_to(transformed_pose)
+            except Exception as e:
+                self.logger.error(f"Error transforming pose or move_to: {e}")
+                return
+
+        except Exception as e:
+            self.logger.error(f"Error in handle_aruco_markers: {e}")
 
     def _transform_pose(self, pose: Pose, source_frame,
                         target_frame: str) -> Pose:
@@ -114,12 +127,22 @@ class ArucoMarkerFollower(Node):
         return transformed_pose
 
     def move_to(self, msg: Pose):
-        pose_goal = PoseStamped()
-        pose_goal.header.frame_id = "camerabase_link"
-        pose_goal.pose = msg
+        if self.moveit2 is None:
+            self.logger.error("Moveit2 is not initialized")
+            return
+        try:
+            pose_goal = PoseStamped()
+            pose_goal.header.frame_id = "camerabase_link"
+            pose_goal.pose = msg
 
-        self.moveit2.move_to_pose(pose=pose_goal)
-        self.moveit2.wait_until_executed()
+            result = self.moveit2.move_to_pose(pose=pose_goal)
+            if result:
+                self.moveit2.wait_until_executed()
+                self.logger.info("Finished moving with moveit2")
+            else:
+                self.logger.warn("Failed to move with moveit2")
+        except Exception as e:
+            self.logger.error(f"Exception in move_to: {e}")
 
 
 def main():
@@ -131,7 +154,10 @@ def main():
         executor.spin()
     except KeyboardInterrupt:
         pass
-    rclpy.shutdown()
+    finally:
+        executor.shutdown()
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

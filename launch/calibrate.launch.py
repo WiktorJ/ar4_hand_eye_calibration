@@ -108,3 +108,4 @@ def generate_launch_description():
     ld.add_action(calibration_aruco_publisher)
     ld.add_action(easy_handeye2)
     return ld
+
