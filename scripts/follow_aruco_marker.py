@@ -8,6 +8,8 @@ from rclpy.callback_groups import ReentrantCallbackGroup, \
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.time import Time
+from rclpy.action import ActionClient
+import threading
 
 import tf2_ros
 from geometry_msgs.msg import PoseStamped
@@ -35,9 +37,9 @@ class ArucoMarkerFollower(Node):
             durability=DurabilityPolicy.VOLATILE
         )
 
-        # Create separate callback groups
-        self.move_cb_group = ReentrantCallbackGroup()
-        self.subscription_cb_group = ReentrantCallbackGroup()  # Changed to ReentrantCallbackGroup
+        # Create callback groups
+        self.move_cb_group = MutuallyExclusiveCallbackGroup()
+        self.subscription_cb_group = MutuallyExclusiveCallbackGroup()
 
         # ID of the aruco marker mounted on the robot
         self.marker_id = self.declare_parameter("marker_id",
@@ -49,10 +51,10 @@ class ArucoMarkerFollower(Node):
 
         # Create publishers
         self.pose_pub = self.create_publisher(PoseStamped, "/cal_marker_pose",
-                                              1)
+                                              10)
         self.target_pose_pub = self.create_publisher(PoseStamped,
                                                      "/follow_aruco_target_pose",
-                                                     1)
+                                                     10)
 
         # Create direct subscription with explicit QoS
         self.logger.info(
@@ -66,14 +68,16 @@ class ArucoMarkerFollower(Node):
         )
 
         # Add a simple timer to periodically check for markers
-        self.create_timer(0.5, self.check_for_markers,
+        self.create_timer(2.0, self.check_for_markers,
                           callback_group=self.subscription_cb_group)
 
-        # Initialize MoveIt2 last
+        # Initialize MoveIt2
         self.arm_joint_names = [
             "camerajoint_1", "camerajoint_2", "camerajoint_3", "camerajoint_4",
             "camerajoint_5", "camerajoint_6"
         ]
+
+        # Create MoveIt2 instance
         self.moveit2 = MoveIt2(
             node=self,
             joint_names=self.arm_joint_names,
@@ -86,9 +90,17 @@ class ArucoMarkerFollower(Node):
         self.moveit2.max_velocity = 1.0
         self.moveit2.max_acceleration = 1.0
 
+        # State variables
         self._prev_marker_pose = None
         self.is_moving = False
         self.last_aruco_msg_time = None
+        self.target_pose_queue = []
+        self.queue_lock = threading.Lock()
+
+        # Create a separate thread for movement execution
+        self.movement_thread = threading.Thread(target=self.movement_loop,
+                                                daemon=True)
+        self.movement_thread.start()
 
         # Add a timer to log subscription status
         self.create_timer(5.0, self.log_status,
@@ -96,30 +108,64 @@ class ArucoMarkerFollower(Node):
 
         self.logger.info("ArucoMarkerFollower node initialized")
 
+    def movement_loop(self):
+        """A separate thread to handle movement requests"""
+        rate = self.create_rate(2.0)  # 2hz check rate
+
+        while rclpy.ok():
+            # Check if there's a pose to process
+            pose_to_process = None
+            with self.queue_lock:
+                if self.target_pose_queue and not self.is_moving:
+                    pose_to_process = self.target_pose_queue.pop(0)
+                    self.is_moving = True
+
+            # Process the pose if we have one
+            if pose_to_process:
+                try:
+                    self.logger.info("Starting movement to target pose")
+                    pose_goal = PoseStamped()
+                    pose_goal.header.frame_id = "camerabase_link"
+                    pose_goal.header.stamp = self.get_clock().now().to_msg()
+                    pose_goal.pose = pose_to_process
+
+                    self.moveit2.move_to_pose(pose=pose_goal)
+                    self.moveit2.wait_until_executed()
+                    self.logger.info("Finished move_to execution")
+                except Exception as e:
+                    self.logger.error(f"Error in movement execution: {e}")
+                finally:
+                    # Always clear the moving flag when done
+                    with self.queue_lock:
+                        self.is_moving = False
+                    self.logger.info("Ready for next marker detection")
+
+            # Sleep to avoid busy waiting
+            try:
+                rate.sleep()
+            except:
+                pass
+
     def check_for_markers(self):
-        """Periodically log the time since last marker message"""
+        """Periodically check incoming markers"""
         if self.last_aruco_msg_time is not None:
             now = self.get_clock().now()
             elapsed = (now - self.last_aruco_msg_time).nanoseconds / 1e9
-            if elapsed > 1.0:  # Only log if it's been more than a second
+            if elapsed > 2.0:  # Only log if it's been more than 2 seconds
                 self.logger.info(
                     f"It's been {elapsed:.2f} seconds since last ArUco marker message")
+
+        # Check if we have pending poses
+        with self.queue_lock:
+            if len(self.target_pose_queue) > 0:
+                self.logger.info(
+                    f"There are {len(self.target_pose_queue)} poses in the queue")
 
     def log_status(self):
         """Log current node status for debugging purposes"""
         self.logger.info(
             f"Node status - Is moving: {self.is_moving}, Has previous marker pose: {self._prev_marker_pose is not None}")
         self.logger.info(f"Waiting for ArUco marker with ID: {self.marker_id}")
-
-        # Publish a debug message to check if publishers are working
-        debug_pose = PoseStamped()
-        debug_pose.header.frame_id = "camerabase_link"
-        debug_pose.header.stamp = self.get_clock().now().to_msg()
-        debug_pose.pose.position.x = 0.0
-        debug_pose.pose.position.y = 0.0
-        debug_pose.pose.position.z = 0.0
-        debug_pose.pose.orientation.w = 1.0
-        self.pose_pub.publish(debug_pose)
 
         # Check if aruco_node is publishing
         try:
@@ -138,10 +184,11 @@ class ArucoMarkerFollower(Node):
         self.logger.info(
             f"Received aruco_markers with {len(msg.marker_ids)} markers at timestamp {msg.header.stamp.sec}.{msg.header.stamp.nanosec}")
 
-        if self.is_moving:
-            self.logger.info(
-                "Still executing previous movement, skipping new marker update")
-            return
+        with self.queue_lock:
+            if self.is_moving:
+                self.logger.info(
+                    "Still executing previous movement, skipping new marker update")
+                return
 
         cal_marker_pose = None
         for i, marker_id in enumerate(msg.marker_ids):
@@ -184,7 +231,10 @@ class ArucoMarkerFollower(Node):
         self._prev_marker_pose.position.x = cal_marker_pose.position.x
         self._prev_marker_pose.position.y = cal_marker_pose.position.y
         self._prev_marker_pose.position.z = cal_marker_pose.position.z
-        self._prev_marker_pose.orientation = cal_marker_pose.orientation
+        self._prev_marker_pose.orientation.x = cal_marker_pose.orientation.x
+        self._prev_marker_pose.orientation.y = cal_marker_pose.orientation.y
+        self._prev_marker_pose.orientation.z = cal_marker_pose.orientation.z
+        self._prev_marker_pose.orientation.w = cal_marker_pose.orientation.w
 
         # Transform pose to robot base frame
         try:
@@ -193,21 +243,20 @@ class ArucoMarkerFollower(Node):
                                                     "camerabase_link")
             self.logger.info(f"Following marker at pose: {transformed_pose}")
 
-            # Set flag to prevent multiple movements at once
-            self.is_moving = True
-            self.move_to(transformed_pose)
+            # Add the pose to the queue for the movement thread to process
+            with self.queue_lock:
+                self.target_pose_queue.append(transformed_pose)
+                self.logger.info(
+                    f"Added pose to queue. Queue size: {len(self.target_pose_queue)}")
 
         except tf2_ros.LookupException as e:
             self.logger.error(f"Error transforming pose: {e}")
-            self.is_moving = False
             return
         except tf2_ros.TransformException as e:
             self.logger.error(f"Transform error: {e}")
-            self.is_moving = False
             return
         except Exception as e:
             self.logger.error(f"Unexpected error in handling marker: {e}")
-            self.is_moving = False
             return
 
     def _transform_pose(self, pose: Pose, source_frame,
@@ -228,7 +277,7 @@ class ArucoMarkerFollower(Node):
         modified_pose = Pose()
         modified_pose.position.x = pose.position.x
         modified_pose.position.y = pose.position.y
-        modified_pose.position.z = pose.position.z + 0.05
+        modified_pose.position.z = pose.position.z
         modified_pose.orientation = pose.orientation
 
         transformed_pose = do_transform_pose(modified_pose, transform)
@@ -239,24 +288,6 @@ class ArucoMarkerFollower(Node):
         stamped_pose.pose = transformed_pose
         self.target_pose_pub.publish(stamped_pose)
         return transformed_pose
-
-    def move_to(self, msg: Pose):
-        try:
-            pose_goal = PoseStamped()
-            pose_goal.header.frame_id = "camerabase_link"
-            pose_goal.header.stamp = self.get_clock().now().to_msg()
-            pose_goal.pose = msg
-
-            self.logger.info("Starting movement to target pose")
-            self.moveit2.move_to_pose(pose=pose_goal)
-            self.moveit2.wait_until_executed()
-            self.logger.info("Finished move_to function")
-        except Exception as e:
-            self.logger.error(f"Error in move_to: {e}")
-        finally:
-            # Always clear the moving flag when done
-            self.is_moving = False
-            self.logger.info("Ready for next marker detection")
 
 
 def main():
@@ -275,7 +306,7 @@ def main():
     except KeyboardInterrupt:
         node.logger.info("KeyboardInterrupt, shutting down...")
     except Exception as e:
-        node.logger.error(f"Unhandled exception: {e}")
+        node.logger.error(f"Unhandled exception in main thread: {e}")
     finally:
         node.logger.info("Shutting down...")
         executor.shutdown()

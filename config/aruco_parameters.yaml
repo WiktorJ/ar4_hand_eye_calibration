@@ -4,5 +4,5 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /camera/camera/color/image_raw
     camera_info_topic: /camera/camera/color/camera_info
-    flip_z_axis: true
+    flip_z_axis: false
     flip_x_axis: true
