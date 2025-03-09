@@ -20,42 +20,54 @@ from pymoveit2 import MoveIt2
 class ArucoMarkerFollower(Node):
 
     def __init__(self):
-        super().__init__("aruco_marker_follower")
+        super().__init__("follow_aruco_marker")
         self.logger = self.get_logger()
+
+        # The most important part: set QoS profile explicitly
+        from rclpy.qos import QoSProfile, \
+            ReliabilityPolicy, \
+            HistoryPolicy, \
+            DurabilityPolicy
+        aruco_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10,
+            durability=DurabilityPolicy.VOLATILE
+        )
 
         # Create separate callback groups
         self.move_cb_group = ReentrantCallbackGroup()
-        self.subscription_cb_group = MutuallyExclusiveCallbackGroup()
+        self.subscription_cb_group = ReentrantCallbackGroup()  # Changed to ReentrantCallbackGroup
 
         # ID of the aruco marker mounted on the robot
-        self.marker_id = self.declare_parameter(
-            "marker_id", 1).get_parameter_value().integer_value
+        self.marker_id = self.declare_parameter("marker_id",
+                                                1).get_parameter_value().integer_value
 
         # Create TF buffer and listener first
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
         # Create publishers
-        self.pose_pub = self.create_publisher(
-            PoseStamped,
-            "/cal_marker_pose",
-            1
-        )
+        self.pose_pub = self.create_publisher(PoseStamped, "/cal_marker_pose",
+                                              1)
+        self.target_pose_pub = self.create_publisher(PoseStamped,
+                                                     "/follow_aruco_target_pose",
+                                                     1)
 
-        self.target_pose_pub = self.create_publisher(
-            PoseStamped,
-            "/follow_aruco_target_pose",
-            1
-        )
-
-        # Create subscription with its callback group
+        # Create direct subscription with explicit QoS
+        self.logger.info(
+            f"Creating subscription to /aruco_markers with QoS: {aruco_qos}")
         self.subscription = self.create_subscription(
             ArucoMarkers,
             "/aruco_markers",
             self.handle_aruco_markers,
-            10,  # Increase queue size
+            qos_profile=aruco_qos,
             callback_group=self.subscription_cb_group
         )
+
+        # Add a simple timer to periodically check for markers
+        self.create_timer(0.5, self.check_for_markers,
+                          callback_group=self.subscription_cb_group)
 
         # Initialize MoveIt2 last
         self.arm_joint_names = [
@@ -76,11 +88,22 @@ class ArucoMarkerFollower(Node):
 
         self._prev_marker_pose = None
         self.is_moving = False
+        self.last_aruco_msg_time = None
 
-        # Add a timer to log subscription status - helpful for debugging
-        self.create_timer(5.0, self.log_status)
+        # Add a timer to log subscription status
+        self.create_timer(5.0, self.log_status,
+                          callback_group=self.subscription_cb_group)
 
         self.logger.info("ArucoMarkerFollower node initialized")
+
+    def check_for_markers(self):
+        """Periodically log the time since last marker message"""
+        if self.last_aruco_msg_time is not None:
+            now = self.get_clock().now()
+            elapsed = (now - self.last_aruco_msg_time).nanoseconds / 1e9
+            if elapsed > 1.0:  # Only log if it's been more than a second
+                self.logger.info(
+                    f"It's been {elapsed:.2f} seconds since last ArUco marker message")
 
     def log_status(self):
         """Log current node status for debugging purposes"""
@@ -88,9 +111,32 @@ class ArucoMarkerFollower(Node):
             f"Node status - Is moving: {self.is_moving}, Has previous marker pose: {self._prev_marker_pose is not None}")
         self.logger.info(f"Waiting for ArUco marker with ID: {self.marker_id}")
 
+        # Publish a debug message to check if publishers are working
+        debug_pose = PoseStamped()
+        debug_pose.header.frame_id = "camerabase_link"
+        debug_pose.header.stamp = self.get_clock().now().to_msg()
+        debug_pose.pose.position.x = 0.0
+        debug_pose.pose.position.y = 0.0
+        debug_pose.pose.position.z = 0.0
+        debug_pose.pose.orientation.w = 1.0
+        self.pose_pub.publish(debug_pose)
+
+        # Check if aruco_node is publishing
+        try:
+            # Use ROS2 API to check topic statistics
+            import subprocess
+            result = subprocess.run(["ros2", "topic", "info", "/aruco_markers"],
+                                    capture_output=True, text=True)
+            self.logger.info(f"ArUco topic info: {result.stdout}")
+        except Exception as e:
+            self.logger.error(f"Failed to check topic info: {e}")
+
     def handle_aruco_markers(self, msg: ArucoMarkers):
+        # Update the last message time
+        self.last_aruco_msg_time = self.get_clock().now()
+
         self.logger.info(
-            f"Received aruco_markers with {len(msg.marker_ids)} markers")
+            f"Received aruco_markers with {len(msg.marker_ids)} markers at timestamp {msg.header.stamp.sec}.{msg.header.stamp.nanosec}")
 
         if self.is_moving:
             self.logger.info(
@@ -99,6 +145,8 @@ class ArucoMarkerFollower(Node):
 
         cal_marker_pose = None
         for i, marker_id in enumerate(msg.marker_ids):
+            self.logger.info(
+                f"Checking marker ID {marker_id} vs expected {self.marker_id}")
             if marker_id == self.marker_id:
                 cal_marker_pose = msg.poses[i]
                 self.logger.info(
@@ -109,7 +157,8 @@ class ArucoMarkerFollower(Node):
                     f"Detected unexpected marker with ID: {marker_id}")
 
         if cal_marker_pose is None:
-            self.logger.info(f"No marker with ID {self.marker_id} found")
+            self.logger.info(
+                f"No marker with ID {self.marker_id} found in message")
             return
 
         # Check if we need to move based on distance threshold
@@ -124,7 +173,7 @@ class ArucoMarkerFollower(Node):
             # If the marker hasn't moved enough, skip following
             if dist_squared < 0.02 ** 2:
                 self.logger.info(
-                    "Marker hasn't moved enough, skipping movement")
+                    f"Marker hasn't moved enough (dist={dist_squared ** 0.5:.4f}m), skipping movement")
                 return
             else:
                 self.logger.info(
@@ -150,12 +199,14 @@ class ArucoMarkerFollower(Node):
 
         except tf2_ros.LookupException as e:
             self.logger.error(f"Error transforming pose: {e}")
+            self.is_moving = False
             return
         except tf2_ros.TransformException as e:
             self.logger.error(f"Transform error: {e}")
+            self.is_moving = False
             return
         except Exception as e:
-            self.logger.error(f"Unexpected error: {e}")
+            self.logger.error(f"Unexpected error in handling marker: {e}")
             self.is_moving = False
             return
 
@@ -166,10 +217,10 @@ class ArucoMarkerFollower(Node):
                                                     Time())
         # Transform the pose
         transformed_pose = do_transform_pose(pose, transform)
-
         # publish pose
         stamped_pose = PoseStamped()
         stamped_pose.header.frame_id = target_frame
+        stamped_pose.header.stamp = self.get_clock().now().to_msg()
         stamped_pose.pose = transformed_pose
         self.pose_pub.publish(stamped_pose)
 
@@ -184,6 +235,7 @@ class ArucoMarkerFollower(Node):
 
         stamped_pose = PoseStamped()
         stamped_pose.header.frame_id = target_frame
+        stamped_pose.header.stamp = self.get_clock().now().to_msg()
         stamped_pose.pose = transformed_pose
         self.target_pose_pub.publish(stamped_pose)
         return transformed_pose
@@ -209,8 +261,11 @@ class ArucoMarkerFollower(Node):
 
 def main():
     rclpy.init()
+
+    # Create the node
     node = ArucoMarkerFollower()
 
+    # Create and configure the executor
     executor = MultiThreadedExecutor(num_threads=4)
     executor.add_node(node)
 
