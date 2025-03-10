@@ -73,12 +73,12 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          camerabase_link:
+          base_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          cameraee_link:
+          ee_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -107,7 +107,7 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          cameralink_6:
+          link_6:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -162,12 +162,12 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          camerabase_link:
+          base_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          cameraee_link:
+          ee_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -196,7 +196,7 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          cameralink_6:
+          link_6:
             Alpha: 1
             Show Axes: false
             Show Trail: false
