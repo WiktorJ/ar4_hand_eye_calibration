@@ -73,41 +73,41 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          base_link:
+          aera_base_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          ee_link:
+          aera_ee_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
-          link_1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          link_2:
+          aera_link_1:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          link_3:
+          aera_link_2:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          link_4:
+          aera_link_3:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          link_5:
+          aera_link_4:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          link_6:
+          aera_link_5:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          aera_link_6:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -162,41 +162,41 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          base_link:
+          aera_base_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          ee_link:
+          aera_ee_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
-          link_1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          link_2:
+          aera_link_1:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          link_3:
+          aera_link_2:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          link_4:
+          aera_link_3:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          link_5:
+          aera_link_4:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          link_6:
+          aera_link_5:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          aera_link_6:
             Alpha: 1
             Show Axes: false
             Show Trail: false

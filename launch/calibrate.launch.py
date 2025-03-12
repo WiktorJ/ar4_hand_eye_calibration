@@ -6,6 +6,8 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
+# This is hard-coded because .rviz configs are not configurable and also have this prefix hard-coded
+_TF_PREFIX = 'aera_'
 
 def generate_launch_description():
     depthai_camera = IncludeLaunchDescription(
@@ -19,7 +21,8 @@ def generate_launch_description():
             ]
         ),
         launch_arguments={
-            'rs_compat': "true",
+            'rs_compat': 'true',
+            'namespace': _TF_PREFIX
         }.items()
     )
 
@@ -57,8 +60,8 @@ def generate_launch_description():
     calibration_args = {
         "name": "ar4_calibration",
         "calibration_type": "eye_on_base",
-        "robot_base_frame": "base_link",
-        "robot_effector_frame": "ee_link",
+        "robot_base_frame": f"{_TF_PREFIX}base_link",
+        "robot_effector_frame": f"{_TF_PREFIX}ee_link",
         "tracking_base_frame": "camera_color_optical_frame",
         "tracking_marker_frame": "calibration_aruco",
     }

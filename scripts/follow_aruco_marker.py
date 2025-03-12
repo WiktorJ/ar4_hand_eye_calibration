@@ -15,6 +15,9 @@ from ros2_aruco_interfaces.msg import ArucoMarkers
 from tf2_geometry_msgs import do_transform_pose
 from pymoveit2 import MoveIt2
 
+# This is hard-coded because .rviz configs are not configurable and also have this prefix hard-coded
+_TF_PREFIX = 'aera_'
+
 
 class ArucoMarkerFollower(Node):
     def __init__(self):
@@ -56,6 +59,16 @@ class ArucoMarkerFollower(Node):
         self.executor_thread = threading.Thread(target=self.movement_thread,
                                                 daemon=True)
         self.executor_thread.start()
+        self.arm_joint_names = [
+            f"{_TF_PREFIX}joint_1", f"{_TF_PREFIX}joint_2",
+            f"{_TF_PREFIX}joint_3", f"{_TF_PREFIX}joint_4",
+            f"{_TF_PREFIX}joint_5", f"{_TF_PREFIX}joint_6"
+        ]
+        self.base_link = f"{_TF_PREFIX}base_link"
+        self.ee_link = f"{_TF_PREFIX}ee_link"
+        self.link_6 = f"{_TF_PREFIX}link_6"
+        self.marker_id = 1
+        self.marker_frame = f"aruco_marker_{self.marker_id}"
 
         self.logger.info("ArucoMarkerFollower node initialized")
 
@@ -69,19 +82,14 @@ class ArucoMarkerFollower(Node):
         """Thread for executing robot movements"""
         # Initialize MoveIt2 in this thread
         self.logger.info("Initializing MoveIt2 in movement thread")
-        self.arm_joint_names = [
-            "joint_1", "joint_2", "joint_3", "joint_4",
-            "joint_5", "joint_6"
-        ]
-
         # Create MoveIt2 client
         try:
             moveit2_node = rclpy.create_node("moveit2_client")
             self.moveit2 = MoveIt2(
                 node=moveit2_node,
                 joint_names=self.arm_joint_names,
-                base_link_name="base_link",
-                end_effector_name="link_6",
+                base_link_name=self.base_link,
+                end_effector_name=self.link_6,
                 group_name="ar_manipulator",
             )
             self.moveit2.planner_id = "RRTConnectkConfigDefault"
@@ -110,7 +118,7 @@ class ArucoMarkerFollower(Node):
                             f"Processing movement to {pose.position.x:.3f}, {pose.position.y:.3f}, {pose.position.z:.3f}")
 
                         pose_goal = PoseStamped()
-                        pose_goal.header.frame_id = "base_link"
+                        pose_goal.header.frame_id = self.base_link
                         pose_goal.header.stamp = moveit2_node.get_clock().now().to_msg()
                         pose_goal.pose = pose
 
@@ -147,11 +155,11 @@ class ArucoMarkerFollower(Node):
         # Check if marker has moved enough
         if self._prev_marker_pose is not None:
             dist_squared = ((
-                                        cal_marker_pose.position.x - self._prev_marker_pose.position.x) ** 2 +
+                                    cal_marker_pose.position.x - self._prev_marker_pose.position.x) ** 2 +
                             (
-                                        cal_marker_pose.position.y - self._prev_marker_pose.position.y) ** 2 +
+                                    cal_marker_pose.position.y - self._prev_marker_pose.position.y) ** 2 +
                             (
-                                        cal_marker_pose.position.z - self._prev_marker_pose.position.z) ** 2)
+                                    cal_marker_pose.position.z - self._prev_marker_pose.position.z) ** 2)
 
             if dist_squared < 0.02 ** 2:
                 self.logger.info("Marker hasn't moved enough, skipping")
@@ -168,7 +176,7 @@ class ArucoMarkerFollower(Node):
         # Transform pose
         try:
             transform = self.tf_buffer.lookup_transform(
-                "base_link",
+                self.base_link,
                 "camera_color_optical_frame",
                 rclpy.time.Time()
             )
@@ -178,7 +186,7 @@ class ArucoMarkerFollower(Node):
 
             # Publish the transformed pose
             stamped_pose = PoseStamped()
-            stamped_pose.header.frame_id = "base_link"
+            stamped_pose.header.frame_id = self.base_link
             stamped_pose.header.stamp = self.get_clock().now().to_msg()
             stamped_pose.pose = transformed_pose
             self.pose_pub.publish(stamped_pose)
@@ -187,12 +195,12 @@ class ArucoMarkerFollower(Node):
             target_pose = Pose()
             target_pose.position.x = transformed_pose.position.x
             target_pose.position.y = transformed_pose.position.y
-            target_pose.position.z = transformed_pose.position.z + 0.05
+            target_pose.position.z = transformed_pose.position.z + 0.01
             target_pose.orientation = transformed_pose.orientation
 
             # Publish target pose
             target_stamped = PoseStamped()
-            target_stamped.header.frame_id = "base_link"
+            target_stamped.header.frame_id = self.base_link
             target_stamped.header.stamp = self.get_clock().now().to_msg()
             target_stamped.pose = target_pose
             self.target_pose_pub.publish(target_stamped)
