@@ -6,7 +6,7 @@ import numpy as np
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 
-_TF_PREFIX = 'aera'
+_TF_PREFIX = 'camera'
 
 class ArucoPoseEstimator(Node):
     """Node to estimate the pose of ArUco markers in the camera image.

@@ -16,7 +16,7 @@ from tf2_geometry_msgs import do_transform_pose
 from pymoveit2 import MoveIt2
 
 # This is hard-coded because .rviz configs are not configurable and also have this prefix hard-coded
-_TF_PREFIX = 'aera'
+_TF_PREFIX = 'camera'
 
 
 class ArucoMarkerFollower(Node):

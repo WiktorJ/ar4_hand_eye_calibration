@@ -73,41 +73,41 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          aerabase_link:
+          camerabase_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          aeraee_link:
+          cameraee_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
-          aeralink_1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          aeralink_2:
+          cameralink_1:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          aeralink_3:
+          cameralink_2:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          aeralink_4:
+          cameralink_3:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          aeralink_5:
+          cameralink_4:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          aeralink_6:
+          cameralink_5:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          cameralink_6:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -162,41 +162,41 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          aerabase_link:
+          camerabase_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          aeraee_link:
+          cameraee_link:
             Alpha: 1
             Show Axes: false
             Show Trail: false
-          aeralink_1:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          aeralink_2:
+          cameralink_1:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          aeralink_3:
+          cameralink_2:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          aeralink_4:
+          cameralink_3:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          aeralink_5:
+          cameralink_4:
             Alpha: 1
             Show Axes: false
             Show Trail: false
             Value: true
-          aeralink_6:
+          cameralink_5:
+            Alpha: 1
+            Show Axes: false
+            Show Trail: false
+            Value: true
+          cameralink_6:
             Alpha: 1
             Show Axes: false
             Show Trail: false
@@ -221,7 +221,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /camera/aera/color/image_raw
+        Value: /camera/camera/color/image_raw
       Value: true
       Visibility:
         Grid: true
