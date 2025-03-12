@@ -6,6 +6,7 @@ import numpy as np
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 
+_TF_PREFIX = 'aera'
 
 class ArucoPoseEstimator(Node):
     """Node to estimate the pose of ArUco markers in the camera image.
@@ -23,14 +24,14 @@ class ArucoPoseEstimator(Node):
         # Image subscriber
         self.image_subscription = self.create_subscription(
             Image,
-            '/camera/camera/color/image_raw',  # Correct topic
+            f'/camera/{_TF_PREFIX}/color/image_raw',  # Correct topic
             self.image_callback,
             10)
 
         # CameraInfo subscriber for color camera
         self.camera_info_subscription = self.create_subscription(
             CameraInfo,
-            '/camera/camera/color/camera_info',  # Correct topic
+            f'/camera/{_TF_PREFIX}/color/camera_info',  # Correct topic
             self.camera_info_callback,
             10)
         self.camera_info_received = False  # Flag to track if we have camera info

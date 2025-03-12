@@ -7,7 +7,7 @@ from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 # This is hard-coded because .rviz configs are not configurable and also have this prefix hard-coded
-_TF_PREFIX = 'aera_'
+_TF_PREFIX = 'aera'
 
 def generate_launch_description():
     depthai_camera = IncludeLaunchDescription(
@@ -22,7 +22,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'rs_compat': 'true',
-            'namespace': _TF_PREFIX
+            'name': _TF_PREFIX
         }.items()
     )
 

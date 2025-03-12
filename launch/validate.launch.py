@@ -16,6 +16,7 @@ def load_yaml(package_name, file_name):
         return yaml.safe_load(file)
 
 
+_TF_PREFIX = 'aera'
 def generate_launch_description():
     ar_model_config = LaunchConfiguration("ar_model")
     ar_model_arg = DeclareLaunchArgument(
@@ -37,6 +38,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'rs_compat': "true",
+            'name': _TF_PREFIX
         }.items()
     )
 
