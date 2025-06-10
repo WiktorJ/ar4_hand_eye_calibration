@@ -258,8 +258,7 @@ class CalibrationOrchestrator(Node):
                     self.samples_taken += 1
                     self.last_sampled_pose_stamped = current_pose_stamped
                     self.get_logger().info(f"Sample taken successfully. Total samples: {self.samples_taken}")
-                    # Use more resonable minimum samples AI!
-                    if self.samples_taken > 0: # Or some minimum number of samples
+                    if self.samples_taken >= 3: # A common minimum for hand-eye calibration
                         compute_calib_req = ComputeCalibration.Request()
                         # Request can be empty
                         compute_calib_resp = self._call_service(self.compute_calibration_client, compute_calib_req, "ComputeCalibration")
