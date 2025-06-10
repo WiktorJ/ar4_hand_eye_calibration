@@ -1,0 +1,10 @@
+# Example joint states for a 6-DOF robot, in degrees.
+# Each inner list is a joint configuration: [j1, j2, j3, j4, j5, j6]
+joint_states_degrees:
+  - [0, 0, 0, 0, 90, 0]
+  - [15, -10, 20, 0, 90, 0]
+  - [-15, 10, -20, 10, 75, 10]
+  - [0, 20, -10, -10, 100, -10]
+  - [20, 0, 0, 20, 80, 20]
+  - [-20, -15, 15, -20, 110, -20]
+  # Add more diverse poses for good calibration
