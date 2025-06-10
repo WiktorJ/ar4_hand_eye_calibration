@@ -4,6 +4,7 @@ project(ar4_hand_eye_calibration)
 find_package(ament_cmake REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(ros2_aruco_interfaces REQUIRED)
+find_package(pymoveit2 REQUIRED)
 
 install(DIRECTORY launch config rviz
   DESTINATION share/${PROJECT_NAME}
