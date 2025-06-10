@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import ExternalShutdownException
-from rclpy.parameter import ParameterDescriptor, ParameterType
+from rclpy.node import ParameterType, ParameterDescriptor
 
 import moveit_commander
 from geometry_msgs.msg import PoseStamped
