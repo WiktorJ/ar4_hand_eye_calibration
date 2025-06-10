@@ -5,7 +5,9 @@ from rclpy.node import Node
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import ParameterType, ParameterDescriptor
 
-import moveit_commander
+from pymoveit2 import MoveIt2 # Replaces moveit_commander
+# from moveit_msgs.msg import MoveItErrorCodes # Not directly used, pymoveit2 handles errors
+
 from geometry_msgs.msg import PoseStamped
 from easy_handeye_msgs.srv import TakeSample, ComputeCalibration, SaveCalibration
 
@@ -80,17 +82,29 @@ class CalibrationOrchestrator(Node):
             # Raise an exception or signal shutdown to the main function
             raise ValueError("'joint_states_yaml_path' parameter is not set.")
 
-        # Initialize MoveIt
-        self.robot_commander = moveit_commander.RobotCommander(robot_description="robot_description")
-        self.planning_scene_interface = moveit_commander.PlanningSceneInterface() # ns=self.get_namespace() ?
-        self.move_group = moveit_commander.MoveGroupCommander(self.move_group_name, robot_description="robot_description") # ns=self.get_namespace() ?
-        self.move_group.set_planning_time(planning_time_seconds)
-        self.move_group.set_num_planning_attempts(planning_attempts)
-        
-        self.robot_effector_frame = self.move_group.get_end_effector_link()
-        self.robot_base_frame = self.move_group.get_planning_frame()
-        self.get_logger().info(f"MoveIt initialized for group '{self.move_group_name}' with effector '{self.robot_effector_frame}' in frame '{self.robot_base_frame}'.")
+        # Initialize MoveIt2
+        self.moveit2 = MoveIt2(
+            node=self,
+            group_name=self.move_group_name,
+            # pymoveit2 will use default service/topic names for robot_description, etc.
+            # It also infers joint_names, base_link_name, and end_effector_link if not provided.
+        )
+        # Wait for MoveIt2 to be ready (e.g. connected to services)
+        # pymoveit2's constructor makes service calls, so it might need a brief spin or check.
+        # However, typical usage doesn't show an explicit wait after MoveIt2 construction.
+        # We assume it's ready or methods will block/fail appropriately.
 
+        self.moveit2.set_planning_options(
+            planning_time=planning_time_seconds,
+            planning_attempts=planning_attempts
+        )
+        
+        # Get frame names (pymoveit2 gets these on init, store them for logging consistency)
+        # These calls might make service requests if not determined during MoveIt2 init.
+        self.robot_base_frame = self.moveit2.base_link_name
+        self.robot_effector_frame = self.moveit2.end_effector_link
+        self.get_logger().info(f"MoveIt2 initialized for group '{self.move_group_name}' with base '{self.robot_base_frame}' and effector '{self.robot_effector_frame}'.")
+        
         # Service Clients for easy_handeye2
         self.take_sample_client = self.create_client(TakeSample, f'/{self.handeye_calibration_name}/take_sample')
         self.compute_calibration_client = self.create_client(ComputeCalibration, f'/{self.handeye_calibration_name}/compute_calibration')
@@ -147,8 +161,9 @@ class CalibrationOrchestrator(Node):
             raise
 
     def _get_current_effector_pose_stamped(self) -> PoseStamped:
-        # Returns PoseStamped of the end-effector link in the planning frame
-        return self.move_group.get_current_pose(self.robot_effector_frame)
+        # Returns PoseStamped of the end-effector link in the planning frame (base_link_name)
+        # pymoveit2.get_current_pose() returns pose in the base_link_name frame.
+        return self.moveit2.get_current_pose()
 
     def _check_sufficient_movement(self, current_pose_stamped: PoseStamped) -> bool:
         if self.last_sampled_pose_stamped is None:
@@ -176,23 +191,33 @@ class CalibrationOrchestrator(Node):
 
     def _move_to_joint_state(self, joint_state_rad):
         self.get_logger().info(f"Moving to joint state: {[round(math.degrees(j),1) for j in joint_state_rad]} deg")
-        self.move_group.set_joint_value_target(joint_state_rad)
         
-        plan_success, plan, planning_time, error_code = self.move_group.plan()
+        # Plan
+        self.get_logger().info("Planning kinematic path...")
+        # joint_state_rad must be in the order of joint_names known to MoveIt2/SRDF.
+        # pymoveit2.plan_kinematic_path uses options set by set_planning_options.
+        trajectory = self.moveit2.plan_kinematic_path(joint_state_rad)
 
-        if plan_success:
-            self.get_logger().info(f"Plan successful (time: {planning_time:.2f}s). Executing...")
-            execute_success = self.move_group.execute(plan, wait=True)
-            self.move_group.stop() # Ensure robot stops
-            self.move_group.clear_pose_targets() # Clear targets
+        if trajectory:
+            # Planning time is not directly returned by plan_kinematic_path.
+            self.get_logger().info(f"Plan successful. Executing trajectory...")
+            # Execute
+            # pymoveit2.execute with blocking=True waits for completion and returns status.
+            execute_success = self.moveit2.execute(trajectory_msg=trajectory, blocking=True)
+            
             if execute_success:
                 self.get_logger().info("Movement execution successful.")
+                # No explicit stop() or clear_pose_targets() needed as with moveit_commander.
+                # execute(blocking=True) ensures completion. Targets are per-call.
                 return True
             else:
-                self.get_logger().error("Movement execution failed.")
+                self.get_logger().error("Movement execution failed. Check MoveIt logs for details.")
+                # pymoveit2's execute() logs error details if it fails.
                 return False
         else:
-            self.get_logger().error(f"Planning failed with error code: {error_code.val}")
+            self.get_logger().error("Planning failed. Check MoveIt logs for details.")
+            # pymoveit2.plan_kinematic_path returns None on failure.
+            # Detailed error codes like from moveit_commander's plan() are not directly available here.
             return False
 
     def _call_service(self, client, request, service_name):
@@ -295,7 +320,7 @@ class CalibrationOrchestrator(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    moveit_commander.roscpp_initialize(args) # Initialize MoveIt C++ bindings
+    # moveit_commander.roscpp_initialize(args) # Not needed for pymoveit2
 
     orchestrator = None
     try:
@@ -316,8 +341,12 @@ def main(args=None):
     finally:
         if orchestrator:
             orchestrator.get_logger().info('Shutting down Calibration Orchestrator node.')
+            # Consider stopping any ongoing MoveIt2 actions if orchestrator is destroyed mid-operation
+            # For example, if orchestrate_calibration_process could be interrupted:
+            # if hasattr(orchestrator, 'moveit2'):
+            #    orchestrator.moveit2.cancel_all_goals() # Optional: ensure robot stops if shutdown is abrupt
             orchestrator.destroy_node()
-        moveit_commander.roscpp_shutdown()
+        # moveit_commander.roscpp_shutdown() # Not needed for pymoveit2
         if rclpy.ok():
              rclpy.shutdown()
 
