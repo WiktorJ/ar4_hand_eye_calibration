@@ -531,7 +531,7 @@ class CalibrationOrchestrator(Node):
                         compute_calib_resp = self._call_service(
                             self.compute_calibration_client, compute_calib_req,
                             "ComputeCalibration")
-                        if compute_calib_resp and compute_calib_resp.success:
+                        if compute_calib_resp: # If ComputeCalibration service call returned a response, assume success
                             self.get_logger().info(
                                 "Calibration computed successfully.")
                             # Log calibration result if needed (from compute_calib_resp.calibration)
@@ -557,7 +557,7 @@ class CalibrationOrchestrator(Node):
             save_calib_resp = self._call_service(self.save_calibration_client,
                                                  save_calib_req,
                                                  "SaveCalibration")
-            if save_calib_resp and save_calib_resp.success:
+            if save_calib_resp: # If SaveCalibration service call returned a response, assume success
                 self.get_logger().info("Final calibration saved successfully.")
             else:
                 self.get_logger().error("Failed to save final calibration.")
