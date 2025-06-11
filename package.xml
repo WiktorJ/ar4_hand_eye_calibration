@@ -21,7 +21,6 @@
   <exec_depend>easy_handeye2</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
-  <!-- pymoveit2 exec_depend is covered by the <depend> tag above -->
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-transforms3d</exec_depend>
   <exec_depend>ros2_aruco</exec_depend>
