@@ -216,17 +216,26 @@ class CalibrationOrchestrator(Node):
         self.target_joint_states_rad = self._load_joint_states_from_yaml()
 
         # State variables
+        # State variables
         self.last_sampled_pose_stamped: PoseStamped = None
         self.samples_taken = 0
         self.last_computed_calibration_transform: Transform = None # For tracking convergence
+        self.calibration_convergence_summary_data = [] # To store (sample_num, trans_diff, rot_diff_deg)
 
         # Directory for intermediate calibration results
         self.intermediate_calibrations_dir = pathlib.Path.home() / ".ros/easy_handeye2/intermediate_calibrations"
         try:
             os.makedirs(self.intermediate_calibrations_dir, exist_ok=True)
             self.get_logger().info(f"Intermediate calibrations will be saved to: {self.intermediate_calibrations_dir}")
+            
+            # Initialize summary CSV file with headers
+            self.summary_filepath = self.intermediate_calibrations_dir / "calibration_convergence_summary.csv"
+            with open(self.summary_filepath, 'w') as f_summary:
+                f_summary.write("SampleNumber,TranslationDifference_m,RotationDifference_deg\n")
+            self.get_logger().info(f"Convergence summary will be saved to: {self.summary_filepath}")
+
         except OSError as e:
-            self.get_logger().error(f"Failed to create directory {self.intermediate_calibrations_dir}: {e}")
+            self.get_logger().error(f"Failed to create directory or summary file {self.intermediate_calibrations_dir}: {e}")
             # Depending on desired behavior, you might want to raise an exception here
             # For now, we'll log an error and continue; saving intermediate files will fail.
 
@@ -591,8 +600,21 @@ class CalibrationOrchestrator(Node):
                                     f"\033[92mChange since last calibration: "
                                     f"Translation diff = {trans_diff:.4f} m, "
                                     f"Rotation diff = {rot_diff_deg:.2f} deg.\033[0m")
+                                # Append to summary data and write to CSV
+                                try:
+                                    with open(self.summary_filepath, 'a') as f_summary:
+                                        f_summary.write(f"{self.samples_taken},{trans_diff:.6f},{rot_diff_deg:.4f}\n")
+                                except Exception as e_summary:
+                                    self.get_logger().error(f"Failed to write to summary CSV: {e_summary}")
                             else:
                                 self.get_logger().info("This is the first computed calibration, no previous to compare against.")
+                                # For the first calibration, we can record 0 difference or a special marker
+                                try:
+                                    with open(self.summary_filepath, 'a') as f_summary:
+                                        f_summary.write(f"{self.samples_taken},0.0,0.0\n") # Or N/A, N/A if preferred
+                                except Exception as e_summary:
+                                    self.get_logger().error(f"Failed to write initial entry to summary CSV: {e_summary}")
+
 
                             # Update the last computed calibration
                             self.last_computed_calibration_transform = current_calib_transform
