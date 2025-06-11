@@ -119,7 +119,7 @@ def generate_launch_description():
             {
                 "joint_states_yaml_path": launch.substitutions.LaunchConfiguration("joint_states_yaml_path"),
                 "move_group_name": "ar_manipulator", # Make this a launch arg if it can change
-                "handeye_calibration_name": handeye_calibration_name,
+                # "handeye_calibration_name": handeye_calibration_name,
                 # "min_translation_threshold_m": 0.02, # Example override
                 # "min_rotation_threshold_deg": 5.0,   # Example override
                 "num_joints": 6 # Set according to your robot (AR4 is 6DOF)

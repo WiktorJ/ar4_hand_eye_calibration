@@ -112,7 +112,7 @@ class CalibrationOrchestrator(Node):
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_DOUBLE,
                                    description='Minimum rotation (degrees) to consider movement significant.'))
-        self.declare_parameter('handeye_calibration_name', '/easy_handeye2/calibration/',
+        self.declare_parameter('handeye_calibration_name', 'easy_handeye2/calibration',
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_STRING,
                                    description='Namespace for easy_handeye2 services.'))
@@ -263,7 +263,7 @@ class CalibrationOrchestrator(Node):
                 try:
                     # Spin to allow TF updates and other callbacks to be processed.
                     # The TransformListener has its own thread, but this ensures the node's main queue is active.
-                    rclpy.spin_once(self, timeout_sec=1.0) 
+                    rclpy.spin_once(self, timeout_sec=2.0)
                 except ExternalShutdownException:
                     self.get_logger().warn("Shutdown requested during spin_once in _wait_for_tracking_tf.")
                     break # Exit the while loop if shutdown occurs during spin
