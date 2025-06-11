@@ -247,8 +247,14 @@ class CalibrationOrchestrator(Node):
                     Time(), timeout=Duration(seconds=10.0))
                 tracking_frames_ok = True
             except tf2_ros.TransformException as ex:
-                self.get_logger().info( # Keep as info, this is a key step
+                self.get_logger().info(
                     f"Waiting for tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame}: {ex}")
+                try:
+                    # Log all frames known to this buffer for diagnostics
+                    all_frames = self.tf_buffer.all_frames_as_string()
+                    self.get_logger().info(f"Current frames in orchestrator's TF buffer: {all_frames}")
+                except Exception as e_diag:
+                    self.get_logger().error(f"Failed to get all_frames_as_string for diagnostics: {e_diag}")
                 self.get_clock().sleep_for(Duration(seconds=1.0))
 
         if not rclpy.ok():
