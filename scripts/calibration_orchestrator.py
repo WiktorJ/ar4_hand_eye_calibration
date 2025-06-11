@@ -251,11 +251,11 @@ class CalibrationOrchestrator(Node):
             except tf2_ros.TransformException as ex:
                 self.get_logger().info(
                     f"Waiting for tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame}: {ex}")
-                try:
-                    all_frames = self.tf_buffer.all_frames_as_string()
-                    self.get_logger().info(f"Orchestrator TF Buffer Contents (while waiting for tracking TF): {all_frames}")
-                except Exception as e_diag:
-                    self.get_logger().error(f"Failed to get all_frames_as_string for diagnostics: {e_diag}")
+                # try:
+                #     all_frames = self.tf_buffer.all_frames_as_string()
+                #     self.get_logger().info(f"Orchestrator TF Buffer Contents (while waiting for tracking TF): {all_frames}")
+                # except Exception as e_diag:
+                #     self.get_logger().error(f"Failed to get all_frames_as_string for diagnostics: {e_diag}")
                 
                 if not rclpy.ok(): # Check if shutdown was requested before attempting to spin
                     self.get_logger().warn("Shutdown detected before spin_once in TF wait loop.")
