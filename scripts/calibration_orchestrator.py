@@ -494,7 +494,7 @@ class CalibrationOrchestrator(Node):
                 continue
 
             # Allow some time for TFs to stabilize if necessary, though MoveIt `execute` is blocking.
-            # rclpy.spin_once(self, timeout_sec=0.5) # Or time.sleep(0.5)
+            rclpy.spin_once(self, timeout_sec=3.0)
             # self.get_clock().sleep_for(rclpy.duration.Duration(seconds=0.5)) # Pythonic sleep
 
             current_pose_stamped = self._get_current_effector_pose_stamped()
@@ -534,8 +534,6 @@ class CalibrationOrchestrator(Node):
                         if compute_calib_resp: # If ComputeCalibration service call returned a response, assume success
                             self.get_logger().info(
                                 "Calibration computed successfully.")
-                            # Log calibration result if needed (from compute_calib_resp.calibration)
-                            # For example:
                             t = compute_calib_resp.calibration.transform.translation
                             r = compute_calib_resp.calibration.transform.rotation
                             self.get_logger().info(f"Computed Calibration Transform: T=({t.x:.4f}, {t.y:.4f}, {t.z:.4f}), Q=({r.x:.4f}, {r.y:.4f}, {r.z:.4f}, {r.w:.4f})")
