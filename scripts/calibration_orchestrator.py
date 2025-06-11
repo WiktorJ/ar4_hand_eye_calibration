@@ -538,7 +538,7 @@ def main(args=None):
     except Exception as e:
         if orchestrator:
             orchestrator.get_logger().error(
-                f"An unexpected error occurred: {e}", exc_info=True)
+                f"An unexpected error occurred: {e}")
         else:
             print(
                 f"An unexpected error occurred in CalibrationOrchestrator: {e}")
