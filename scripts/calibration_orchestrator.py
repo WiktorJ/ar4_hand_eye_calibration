@@ -562,8 +562,9 @@ class CalibrationOrchestrator(Node):
                             self.get_logger().info(
                                 "Calibration computed successfully.")
                             
-                            current_calib_transform_stamped = compute_calib_resp.calibration.transform
-                            current_calib_transform = current_calib_transform_stamped.transform # This is geometry_msgs/Transform
+                            # Assuming compute_calib_resp.calibration.transform is geometry_msgs/msg/Transform
+                            # based on the reported AttributeError.
+                            current_calib_transform = compute_calib_resp.calibration.transform 
                             
                             # Log the computed transform
                             t = current_calib_transform.translation
