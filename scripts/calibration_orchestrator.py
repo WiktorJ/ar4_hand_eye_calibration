@@ -7,6 +7,7 @@ from rclpy.node import ParameterType, ParameterDescriptor
 from rclpy.time import Duration, Time
 import tf2_ros
 from tf2_ros import Buffer, TransformListener
+from sensor_msgs.msg import JointState # Added import
 
 from pymoveit2 import MoveIt2  # Replaces moveit_commander
 # from moveit_msgs.msg import MoveItErrorCodes # Not directly used, pymoveit2 handles errors
@@ -340,8 +341,41 @@ class CalibrationOrchestrator(Node):
 
     def _get_current_effector_pose_stamped(self) -> PoseStamped:
         # Returns PoseStamped of the end-effector link in the planning frame (base_link_name)
+        
+        # Get the full current joint state from MoveIt2, which might include non-group joints
+        full_joint_state: JointState = self.moveit2.joint_state
+        if full_joint_state is None:
+            self.get_logger().error("Could not get current joint_state from MoveIt2.")
+            return None
+
+        # Filter to include only the joints relevant to the MoveIt2 instance's planning group
+        filtered_joint_state = JointState()
+        filtered_joint_state.header = full_joint_state.header # Retain header for timestamp consistency
+        
+        relevant_joint_names = self.moveit2.joint_names
+        relevant_joint_positions = []
+        
+        # Create a mapping from name to position for efficient lookup
+        full_joint_positions_map = dict(zip(full_joint_state.name, full_joint_state.position))
+        
+        for name in relevant_joint_names:
+            if name in full_joint_positions_map:
+                filtered_joint_state.name.append(name)
+                relevant_joint_positions.append(full_joint_positions_map[name])
+            else:
+                self.get_logger().warn(f"Joint '{name}' from MoveIt2 joint_names not found in current full_joint_state. Skipping.")
+        
+        if len(filtered_joint_state.name) != len(relevant_joint_names):
+            self.get_logger().error("Mismatch in relevant joints found in full_joint_state. Cannot reliably compute FK.")
+            return None
+            
+        filtered_joint_state.position = relevant_joint_positions
+        # Velocity and effort are not strictly needed for FK but can be populated if available and desired
+        # For FK, only names and positions are essential.
+
         # self.moveit2.compute_fk() with no arguments defaults to current joint state and end-effector.
-        return self.moveit2.compute_fk()
+        # We now pass the filtered joint state.
+        return self.moveit2.compute_fk(joint_state=filtered_joint_state)
 
     def _check_sufficient_movement(self,
                                    current_pose_stamped: PoseStamped) -> bool:
