@@ -58,6 +58,9 @@ class CalibrationOrchestrator(Node):
         # Declare parameters
         self.declare_parameter('joint_states_yaml_path', '', ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description='Path to YAML file with joint states in degrees.'))
         self.declare_parameter('move_group_name', 'ar_manipulator', ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description='Name of the MoveIt move group.'))
+        self.declare_parameter('robot_joint_names', descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING_ARRAY, description='List of joint names for the robot.'))
+        self.declare_parameter('robot_base_link', descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description='Name of the robot base link.'))
+        self.declare_parameter('robot_end_effector_link', descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description='Name of the robot end effector link.'))
         self.declare_parameter('min_translation_threshold_m', 0.01, ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, description='Minimum translation (meters) to consider movement significant for taking a sample.'))
         self.declare_parameter('min_rotation_threshold_deg', 5.0, ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, description='Minimum rotation (degrees) to consider movement significant.'))
         self.declare_parameter('handeye_calibration_name', 'ar4_calibration', ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description='Namespace for easy_handeye2 services.'))
@@ -69,6 +72,9 @@ class CalibrationOrchestrator(Node):
         # Get parameters
         self.joint_states_yaml_path = self.get_parameter('joint_states_yaml_path').value
         self.move_group_name = self.get_parameter('move_group_name').value
+        self.robot_joint_names = self.get_parameter('robot_joint_names').value
+        self.robot_base_link = self.get_parameter('robot_base_link').value
+        self.robot_end_effector_link = self.get_parameter('robot_end_effector_link').value
         self.min_translation_threshold_m = self.get_parameter('min_translation_threshold_m').value
         min_rotation_threshold_deg = self.get_parameter('min_rotation_threshold_deg').value
         self.min_rotation_threshold_rad = math.radians(min_rotation_threshold_deg)
@@ -85,26 +91,26 @@ class CalibrationOrchestrator(Node):
         # Initialize MoveIt2
         self.moveit2 = MoveIt2(
             node=self,
-            group_name=self.move_group_name,
-            # pymoveit2 will use default service/topic names for robot_description, etc.
-            # It also infers joint_names, base_link_name, and end_effector_link if not provided.
+            joint_names=self.robot_joint_names,
+            base_link_name=self.robot_base_link,
+            end_effector_name=self.robot_end_effector_link,
+            group_name=self.move_group_name
         )
         # Wait for MoveIt2 to be ready (e.g. connected to services)
         # pymoveit2's constructor makes service calls, so it might need a brief spin or check.
         # However, typical usage doesn't show an explicit wait after MoveIt2 construction.
         # We assume it's ready or methods will block/fail appropriately.
 
-        self.moveit2.set_planning_options(
-            planning_time=planning_time_seconds,
-            planning_attempts=planning_attempts
-        )
+        # Set planning options using properties
+        self.moveit2.allowed_planning_time = planning_time_seconds
+        self.moveit2.num_planning_attempts = planning_attempts
         
-        # Get frame names (pymoveit2 gets these on init, store them for logging consistency)
-        # These calls might make service requests if not determined during MoveIt2 init.
+        # Get frame names (these should match the parameters passed to MoveIt2)
         self.robot_base_frame = self.moveit2.base_link_name
         self.robot_effector_frame = self.moveit2.end_effector_link
         self.get_logger().info(f"MoveIt2 initialized for group '{self.move_group_name}' with base '{self.robot_base_frame}' and effector '{self.robot_effector_frame}'.")
-        
+        self.get_logger().info(f"MoveIt2 using joint names: {self.moveit2.joint_names}")
+
         # Service Clients for easy_handeye2
         self.take_sample_client = self.create_client(TakeSample, f'/{self.handeye_calibration_name}/take_sample')
         self.compute_calibration_client = self.create_client(ComputeCalibration, f'/{self.handeye_calibration_name}/compute_calibration')
