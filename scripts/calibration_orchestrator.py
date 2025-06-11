@@ -354,34 +354,29 @@ class CalibrationOrchestrator(Node):
             f"Moving to joint state: {[round(math.degrees(j), 1) for j in joint_state_rad]} deg")
 
         # Plan
-        self.get_logger().info("Planning kinematic path...")
-        # joint_state_rad must be in the order of joint_names known to MoveIt2/SRDF.
-        # pymoveit2.plan_kinematic_path uses options set by set_planning_options.
-        trajectory = self.moveit2.plan_kinematic_path(joint_state_rad)
+        self.get_logger().info("Moving to configuration...")
+        # joint_state_rad must be in the order of joint_names known to MoveIt2.
+        # The joint_names are already set during MoveIt2 initialization.
+        # move_to_configuration handles planning and execution.
+        # It uses the planning options (time, attempts) set on the moveit2 object.
+        self.moveit2.move_to_configuration(
+            joint_positions=joint_state_rad,
+            # joint_names can be omitted if using the default joint_names from init
+        )
 
-        if trajectory:
-            # Planning time is not directly returned by plan_kinematic_path.
-            self.get_logger().info(f"Plan successful. Executing trajectory...")
-            # Execute
-            # pymoveit2.execute with blocking=True waits for completion and returns status.
-            execute_success = self.moveit2.execute(trajectory_msg=trajectory,
-                                                   blocking=True)
+        # Wait for the execution to complete and get the result
+        # wait_until_executed returns True on success, False on failure.
+        execution_successful = self.moveit2.wait_until_executed()
 
-            if execute_success:
-                self.get_logger().info("Movement execution successful.")
-                # No explicit stop() or clear_pose_targets() needed as with moveit_commander.
-                # execute(blocking=True) ensures completion. Targets are per-call.
-                return True
-            else:
-                self.get_logger().error(
-                    "Movement execution failed. Check MoveIt logs for details.")
-                # pymoveit2's execute() logs error details if it fails.
-                return False
+        if execution_successful:
+            self.get_logger().info("Movement execution successful.")
+            return True
         else:
             self.get_logger().error(
-                "Planning failed. Check MoveIt logs for details.")
-            # pymoveit2.plan_kinematic_path returns None on failure.
-            # Detailed error codes like from moveit_commander's plan() are not directly available here.
+                "Movement execution failed. Check MoveIt logs for details. Last error code: {}".format(
+                    self.moveit2.get_last_execution_error_code()
+                )
+            )
             return False
 
     def _call_service(self, client, request, service_name):
