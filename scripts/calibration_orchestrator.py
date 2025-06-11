@@ -185,10 +185,17 @@ class CalibrationOrchestrator(Node):
         self.tf_buffer = Buffer(node=self)
         self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
 
-        # Wait for critical TFs before attempting to connect to services that might depend on them
-        self._wait_for_tf_transforms()
+        # Wait for the robot's own kinematic chain TF to be ready.
+        # This is essential for MoveIt2 to function correctly (e.g., get_current_pose).
+        if not self._wait_for_robot_kinematic_chain_tf():
+            self.get_logger().error(
+                "Shutdown requested or failed to get robot kinematic chain TF. Aborting initialization.")
+            # Propagate shutdown or raise a specific error to halt execution
+            raise rclpy.executors.ExternalShutdownException()
+
 
         # Service Clients for easy_handeye2
+        # We create them here, but wait for them later, after the first move.
         self.take_sample_client = self.create_client(TakeSample,
                                                      f'/{self.handeye_calibration_name}/take_sample')
         self.compute_calibration_client = self.create_client(ComputeCalibration,
@@ -196,7 +203,8 @@ class CalibrationOrchestrator(Node):
         self.save_calibration_client = self.create_client(SaveCalibration,
                                                           f'/{self.handeye_calibration_name}/save_calibration')
 
-        self.wait_for_services()
+        # NOTE: self.wait_for_services() is MOVED to _wait_for_tracking_tf_and_services()
+        # and called after the first robot move in orchestrate_calibration_process().
 
         # Load joint states
         self.target_joint_states_rad = self._load_joint_states_from_yaml()
@@ -207,10 +215,8 @@ class CalibrationOrchestrator(Node):
 
         self.get_logger().info("Calibration Orchestrator initialized.")
 
-    def _wait_for_tf_transforms(self):
-        self.get_logger().info("Waiting for critical TF transforms to be available...")
-
-        # Check robot transform
+    def _wait_for_robot_kinematic_chain_tf(self) -> bool:
+        self.get_logger().info("Waiting for robot kinematic chain TF (base to effector) to be available...")
         robot_frames_ok = False
         while not robot_frames_ok and rclpy.ok():
             try:
@@ -218,16 +224,21 @@ class CalibrationOrchestrator(Node):
                     self.robot_base_link, self.robot_end_effector_link,
                     Time(), timeout=Duration(seconds=1.0))
                 robot_frames_ok = True
-                self.get_logger().info(
-                    f"Robot transform {self.robot_base_link} -> {self.robot_end_effector_link} is available.")
             except tf2_ros.TransformException as ex:
-                self.get_logger().info(
+                self.get_logger().debug( # Changed to debug to reduce noise if it takes a few tries
                     f"Waiting for robot transform {self.robot_base_link} -> {self.robot_end_effector_link}: {ex}")
-                self.get_clock().sleep_for(Duration(seconds=1.0)) # rclpy.spin_once(self, timeout_sec=1.0)
+                self.get_clock().sleep_for(Duration(seconds=1.0))
 
-        if not rclpy.ok(): return # Exit if shutdown requested
+        if not rclpy.ok():
+            self.get_logger().warn("Shutdown requested while waiting for robot kinematic chain TF.")
+            return False
+        
+        self.get_logger().info(
+            f"Robot transform {self.robot_base_link} -> {self.robot_end_effector_link} is available.")
+        return True
 
-        # Check tracking transform
+    def _wait_for_tracking_tf_and_services(self) -> bool:
+        self.get_logger().info("Waiting for tracking system TF (tracking base to marker) to be available...")
         tracking_frames_ok = False
         while not tracking_frames_ok and rclpy.ok():
             try:
@@ -235,16 +246,27 @@ class CalibrationOrchestrator(Node):
                     self.tracking_base_frame, self.tracking_marker_frame,
                     Time(), timeout=Duration(seconds=1.0))
                 tracking_frames_ok = True
-                self.get_logger().info(
-                    f"Tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame} is available.")
             except tf2_ros.TransformException as ex:
-                self.get_logger().info(
+                self.get_logger().info( # Keep as info, this is a key step
                     f"Waiting for tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame}: {ex}")
-                self.get_clock().sleep_for(Duration(seconds=1.0)) # rclpy.spin_once(self, timeout_sec=1.0)
-        
-        if rclpy.ok():
-            self.get_logger().info("All critical TF transforms are available.")
+                self.get_clock().sleep_for(Duration(seconds=1.0))
 
+        if not rclpy.ok():
+            self.get_logger().warn("Shutdown requested while waiting for tracking TF.")
+            return False
+
+        self.get_logger().info(
+            f"Tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame} is available.")
+        
+        self.get_logger().info("Now waiting for easy_handeye2 services...")
+        self.wait_for_services() # This method already checks rclpy.ok() implicitly via client.wait_for_service
+
+        if not rclpy.ok(): # Check again in case wait_for_services was interrupted
+            self.get_logger().warn("Shutdown requested while waiting for services.")
+            return False
+            
+        self.get_logger().info("Tracking TF and easy_handeye2 services are ready.")
+        return True
 
     def wait_for_services(self):
         services = {
@@ -392,6 +414,24 @@ class CalibrationOrchestrator(Node):
             self.get_logger().error("No target joint states loaded. Aborting.")
             return
 
+        # --- Initial Setup: Move to first pose, then wait for TFs/services ---
+        self.get_logger().info("Performing initial setup: moving to the first calibration pose...")
+        first_joint_state_rad = self.target_joint_states_rad[0]
+        if not self._move_to_joint_state(first_joint_state_rad):
+            self.get_logger().error(
+                "Failed to move to the initial joint state. Aborting calibration process.")
+            return
+
+        self.get_logger().info(
+            "Initial move complete. Now ensuring tracking TF and services are ready.")
+        if not self._wait_for_tracking_tf_and_services():
+            self.get_logger().error(
+                "Tracking TF or services did not become ready after initial move. Aborting calibration process.")
+            return
+        # --- End of Initial Setup ---
+
+        self.get_logger().info(
+            "Initial setup complete. Starting main calibration sequence.")
         for i, joint_state_rad in enumerate(self.target_joint_states_rad):
             self.get_logger().info(
                 f"--- Processing calibration pose {i + 1}/{len(self.target_joint_states_rad)} ---")
