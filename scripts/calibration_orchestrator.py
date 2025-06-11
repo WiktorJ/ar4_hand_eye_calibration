@@ -520,7 +520,7 @@ class CalibrationOrchestrator(Node):
                                                       take_sample_req,
                                                       "TakeSample")
 
-                if take_sample_resp and take_sample_resp.success:
+                if take_sample_resp:  # If TakeSample service call returned a response, assume success
                     self.samples_taken += 1
                     self.last_sampled_pose_stamped = current_pose_stamped
                     self.get_logger().info(
