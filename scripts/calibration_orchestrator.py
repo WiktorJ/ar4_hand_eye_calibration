@@ -587,9 +587,9 @@ class CalibrationOrchestrator(Node):
                                 trans_diff, rot_diff_rad = calculate_pose_diff(current_calib_pose, prev_calib_pose)
                                 rot_diff_deg = math.degrees(rot_diff_rad)
                                 self.get_logger().info(
-                                    f"Change since last calibration: "
+                                    f"\033[92mChange since last calibration: "
                                     f"Translation diff = {trans_diff:.4f} m, "
-                                    f"Rotation diff = {rot_diff_deg:.2f} deg.")
+                                    f"Rotation diff = {rot_diff_deg:.2f} deg.\033[0m")
                             else:
                                 self.get_logger().info("This is the first computed calibration, no previous to compare against.")
 
