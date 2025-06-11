@@ -536,9 +536,9 @@ class CalibrationOrchestrator(Node):
                                 "Calibration computed successfully.")
                             # Log calibration result if needed (from compute_calib_resp.calibration)
                             # For example:
-                            # t = compute_calib_resp.calibration.transform.translation
-                            # r = compute_calib_resp.calibration.transform.rotation
-                            # self.get_logger().info(f"Computed Calibration Transform: T=({t.x:.4f}, {t.y:.4f}, {t.z:.4f}), Q=({r.x:.4f}, {r.y:.4f}, {r.z:.4f}, {r.w:.4f})")
+                            t = compute_calib_resp.calibration.transform.translation
+                            r = compute_calib_resp.calibration.transform.rotation
+                            self.get_logger().info(f"Computed Calibration Transform: T=({t.x:.4f}, {t.y:.4f}, {t.z:.4f}), Q=({r.x:.4f}, {r.y:.4f}, {r.z:.4f}, {r.w:.4f})")
                         else:
                             self.get_logger().warn(
                                 "Failed to compute calibration after taking sample.")
