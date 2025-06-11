@@ -4,6 +4,9 @@ import rclpy
 from rclpy.node import Node
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import ParameterType, ParameterDescriptor
+from rclpy.time import Duration, Time
+import tf2_ros
+from tf2_ros import Buffer, TransformListener
 
 from pymoveit2 import MoveIt2  # Replaces moveit_commander
 # from moveit_msgs.msg import MoveItErrorCodes # Not directly used, pymoveit2 handles errors
@@ -93,6 +96,14 @@ class CalibrationOrchestrator(Node):
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_STRING,
                                    description='Name of the robot end effector link.'))
+        self.declare_parameter('tracking_base_frame', f"{_TF_PREFIX}_color_optical_frame", # Example default
+                               ParameterDescriptor(
+                                   type=ParameterType.PARAMETER_STRING,
+                                   description='TF frame of the camera/tracking system base.'))
+        self.declare_parameter('tracking_marker_frame', f"{_TF_PREFIX}_marker", # Example default, user should set this to the specific marker
+                               ParameterDescriptor(
+                                   type=ParameterType.PARAMETER_STRING,
+                                   description='TF frame of the calibration marker.'))
         self.declare_parameter('min_translation_threshold_m', 0.01,
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_DOUBLE,
@@ -124,6 +135,8 @@ class CalibrationOrchestrator(Node):
         self.robot_base_link = self.get_parameter('robot_base_link').value
         self.robot_end_effector_link = self.get_parameter(
             'robot_end_effector_link').value
+        self.tracking_base_frame = self.get_parameter('tracking_base_frame').value
+        self.tracking_marker_frame = self.get_parameter('tracking_marker_frame').value
         self.min_translation_threshold_m = self.get_parameter(
             'min_translation_threshold_m').value
         min_rotation_threshold_deg = self.get_parameter(
@@ -168,6 +181,13 @@ class CalibrationOrchestrator(Node):
         self.get_logger().info(
             f"MoveIt2 using joint names: {self.moveit2.joint_names}")
 
+        # TF Buffer and Listener
+        self.tf_buffer = Buffer(node=self)
+        self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
+
+        # Wait for critical TFs before attempting to connect to services that might depend on them
+        self._wait_for_tf_transforms()
+
         # Service Clients for easy_handeye2
         self.take_sample_client = self.create_client(TakeSample,
                                                      f'/{self.handeye_calibration_name}/take_sample')
@@ -186,6 +206,45 @@ class CalibrationOrchestrator(Node):
         self.samples_taken = 0
 
         self.get_logger().info("Calibration Orchestrator initialized.")
+
+    def _wait_for_tf_transforms(self):
+        self.get_logger().info("Waiting for critical TF transforms to be available...")
+
+        # Check robot transform
+        robot_frames_ok = False
+        while not robot_frames_ok and rclpy.ok():
+            try:
+                self.tf_buffer.lookup_transform(
+                    self.robot_base_link, self.robot_end_effector_link,
+                    Time(), timeout=Duration(seconds=1.0))
+                robot_frames_ok = True
+                self.get_logger().info(
+                    f"Robot transform {self.robot_base_link} -> {self.robot_end_effector_link} is available.")
+            except tf2_ros.TransformException as ex:
+                self.get_logger().info(
+                    f"Waiting for robot transform {self.robot_base_link} -> {self.robot_end_effector_link}: {ex}")
+                self.get_clock().sleep_for(Duration(seconds=1.0)) # rclpy.spin_once(self, timeout_sec=1.0)
+
+        if not rclpy.ok(): return # Exit if shutdown requested
+
+        # Check tracking transform
+        tracking_frames_ok = False
+        while not tracking_frames_ok and rclpy.ok():
+            try:
+                self.tf_buffer.lookup_transform(
+                    self.tracking_base_frame, self.tracking_marker_frame,
+                    Time(), timeout=Duration(seconds=1.0))
+                tracking_frames_ok = True
+                self.get_logger().info(
+                    f"Tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame} is available.")
+            except tf2_ros.TransformException as ex:
+                self.get_logger().info(
+                    f"Waiting for tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame}: {ex}")
+                self.get_clock().sleep_for(Duration(seconds=1.0)) # rclpy.spin_once(self, timeout_sec=1.0)
+        
+        if rclpy.ok():
+            self.get_logger().info("All critical TF transforms are available.")
+
 
     def wait_for_services(self):
         services = {
