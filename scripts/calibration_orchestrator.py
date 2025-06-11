@@ -9,13 +9,13 @@ from pymoveit2 import MoveIt2 # Replaces moveit_commander
 # from moveit_msgs.msg import MoveItErrorCodes # Not directly used, pymoveit2 handles errors
 
 from geometry_msgs.msg import PoseStamped
-from easy_handeye_msgs.srv import TakeSample, ComputeCalibration, SaveCalibration
+from easy_handeye2_msgs.srv import TakeSample, ComputeCalibration, SaveCalibration
 
 import yaml
 import numpy as np
 import math
 from transforms3d.quaternions import qinverse, qmult
-from transforms3d.utils import norm as vector_norm # Avoid conflict with np.linalg.norm
+from transforms3d.utils import vector_norm # Avoid conflict with np.linalg.norm
 
 def calculate_pose_diff(pose1_stamped: PoseStamped, pose2_stamped: PoseStamped):
     """
