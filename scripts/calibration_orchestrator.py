@@ -22,6 +22,11 @@ import numpy as np
 import math
 from transforms3d.quaternions import qinverse, qmult
 from transforms3d.utils import vector_norm  # Avoid conflict with np.linalg.norm
+from geometry_msgs.msg import Transform # Added for type hinting
+from rosidl_runtime_py import message_to_yaml
+import pathlib
+import os
+
 
 # This is hard-coded because .rviz configs are not configurable and also have this prefix hard-coded
 _TF_PREFIX = 'camera'
@@ -213,8 +218,30 @@ class CalibrationOrchestrator(Node):
         # State variables
         self.last_sampled_pose_stamped: PoseStamped = None
         self.samples_taken = 0
+        self.last_computed_calibration_transform: Transform = None # For tracking convergence
+
+        # Directory for intermediate calibration results
+        self.intermediate_calibrations_dir = pathlib.Path.home() / ".ros/easy_handeye2/intermediate_calibrations"
+        try:
+            os.makedirs(self.intermediate_calibrations_dir, exist_ok=True)
+            self.get_logger().info(f"Intermediate calibrations will be saved to: {self.intermediate_calibrations_dir}")
+        except OSError as e:
+            self.get_logger().error(f"Failed to create directory {self.intermediate_calibrations_dir}: {e}")
+            # Depending on desired behavior, you might want to raise an exception here
+            # For now, we'll log an error and continue; saving intermediate files will fail.
 
         self.get_logger().info("Calibration Orchestrator initialized.")
+
+    def _transform_to_pose_stamped(self, transform_msg: Transform, frame_id: str, stamp: Time) -> PoseStamped:
+        """Converts a geometry_msgs/Transform to a PoseStamped."""
+        ps = PoseStamped()
+        ps.header.frame_id = frame_id
+        ps.header.stamp = stamp
+        ps.pose.position.x = transform_msg.translation.x
+        ps.pose.position.y = transform_msg.translation.y
+        ps.pose.position.z = transform_msg.translation.z
+        ps.pose.orientation = transform_msg.rotation
+        return ps
 
     def _wait_for_robot_kinematic_chain_tf(self) -> bool:
         self.get_logger().info("Waiting for robot kinematic chain TF (base to effector) to be available...")
@@ -534,9 +561,50 @@ class CalibrationOrchestrator(Node):
                         if compute_calib_resp: # If ComputeCalibration service call returned a response, assume success
                             self.get_logger().info(
                                 "Calibration computed successfully.")
-                            t = compute_calib_resp.calibration.transform.translation
-                            r = compute_calib_resp.calibration.transform.rotation
-                            self.get_logger().info(f"Computed Calibration Transform: T=({t.x:.4f}, {t.y:.4f}, {t.z:.4f}), Q=({r.x:.4f}, {r.y:.4f}, {r.z:.4f}, {r.w:.4f})")
+                            
+                            current_calib_transform_stamped = compute_calib_resp.calibration.transform
+                            current_calib_transform = current_calib_transform_stamped.transform # This is geometry_msgs/Transform
+                            
+                            # Log the computed transform
+                            t = current_calib_transform.translation
+                            r = current_calib_transform.rotation
+                            self.get_logger().info(f"Computed Calibration Transform (sample {self.samples_taken}): "
+                                                   f"T=({t.x:.4f}, {t.y:.4f}, {t.z:.4f}), "
+                                                   f"Q=({r.x:.4f}, {r.y:.4f}, {r.z:.4f}, {r.w:.4f})")
+
+                            # Compare with the previous calibration if available
+                            if self.last_computed_calibration_transform:
+                                current_calib_pose = self._transform_to_pose_stamped(
+                                    current_calib_transform,
+                                    "calibration_comparison_frame", # Dummy frame for comparison
+                                    self.get_clock().now().to_msg()
+                                )
+                                prev_calib_pose = self._transform_to_pose_stamped(
+                                    self.last_computed_calibration_transform,
+                                    "calibration_comparison_frame", # Dummy frame for comparison
+                                    self.get_clock().now().to_msg()
+                                )
+                                trans_diff, rot_diff_rad = calculate_pose_diff(current_calib_pose, prev_calib_pose)
+                                rot_diff_deg = math.degrees(rot_diff_rad)
+                                self.get_logger().info(
+                                    f"Change since last calibration: "
+                                    f"Translation diff = {trans_diff:.4f} m, "
+                                    f"Rotation diff = {rot_diff_deg:.2f} deg.")
+                            else:
+                                self.get_logger().info("This is the first computed calibration, no previous to compare against.")
+
+                            # Update the last computed calibration
+                            self.last_computed_calibration_transform = current_calib_transform
+
+                            # Save intermediate calibration result to a YAML file
+                            try:
+                                intermediate_calib_filename = f"calibration_sample_{self.samples_taken}.yaml"
+                                intermediate_calib_filepath = self.intermediate_calibrations_dir / intermediate_calib_filename
+                                with open(intermediate_calib_filepath, 'w') as f:
+                                    f.write(message_to_yaml(compute_calib_resp.calibration))
+                                self.get_logger().info(f"Saved intermediate calibration to: {intermediate_calib_filepath}")
+                            except Exception as e_save:
+                                self.get_logger().error(f"Failed to save intermediate calibration: {e_save}")
                         else:
                             self.get_logger().warn(
                                 "Failed to compute calibration after taking sample.")
