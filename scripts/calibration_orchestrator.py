@@ -340,8 +340,8 @@ class CalibrationOrchestrator(Node):
 
     def _get_current_effector_pose_stamped(self) -> PoseStamped:
         # Returns PoseStamped of the end-effector link in the planning frame (base_link_name)
-        # pymoveit2.get_current_pose() returns pose in the base_link_name frame.
-        return self.moveit2.get_current_pose()
+        # self.moveit2.compute_fk() with no arguments defaults to current joint state and end-effector.
+        return self.moveit2.compute_fk()
 
     def _check_sufficient_movement(self,
                                    current_pose_stamped: PoseStamped) -> bool:
