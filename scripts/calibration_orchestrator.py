@@ -246,29 +246,46 @@ class CalibrationOrchestrator(Node):
                     self.tracking_base_frame, self.tracking_marker_frame,
                     Time(), timeout=Duration(seconds=10.0))
                 tracking_frames_ok = True
+                self.get_logger().info( # Log success immediately
+                    f"Tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame} is available.")
             except tf2_ros.TransformException as ex:
                 self.get_logger().info(
                     f"Waiting for tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame}: {ex}")
                 try:
-                    # Log all frames known to this buffer for diagnostics
                     all_frames = self.tf_buffer.all_frames_as_string()
-                    self.get_logger().info(f"Current frames in orchestrator's TF buffer: {all_frames}")
+                    self.get_logger().info(f"Orchestrator TF Buffer Contents (while waiting for tracking TF): {all_frames}")
                 except Exception as e_diag:
                     self.get_logger().error(f"Failed to get all_frames_as_string for diagnostics: {e_diag}")
-                self.get_clock().sleep_for(Duration(seconds=1.0))
+                
+                if not rclpy.ok(): # Check if shutdown was requested before attempting to spin
+                    self.get_logger().warn("Shutdown detected before spin_once in TF wait loop.")
+                    break # Exit the while loop
+                try:
+                    # Spin to allow TF updates and other callbacks to be processed.
+                    # The TransformListener has its own thread, but this ensures the node's main queue is active.
+                    rclpy.spin_once(self, timeout_sec=1.0) 
+                except ExternalShutdownException:
+                    self.get_logger().warn("Shutdown requested during spin_once in _wait_for_tracking_tf.")
+                    break # Exit the while loop if shutdown occurs during spin
 
-        if not rclpy.ok():
-            self.get_logger().warn("Shutdown requested while waiting for tracking TF.")
+        if not tracking_frames_ok:
+            if not rclpy.ok(): # If loop exited due to shutdown
+                self.get_logger().warn(
+                    f"Shutdown requested while waiting for tracking TF ({self.tracking_base_frame} -> {self.tracking_marker_frame}), TF not yet found.")
+            else: # If loop exited for other reasons (e.g. max attempts if implemented) but rclpy still ok
+                self.get_logger().error(
+                    f"Failed to find tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame} after loop completion.")
             return False
-
-        self.get_logger().info(
-            f"Tracking transform {self.tracking_base_frame} -> {self.tracking_marker_frame} is available.")
         
-        self.get_logger().info("Now waiting for easy_handeye2 services...")
-        self.wait_for_services() # This method already checks rclpy.ok() implicitly via client.wait_for_service
+        # If we reach here, tracking_frames_ok is True.
+        # rclpy.ok() should also be true, otherwise the 'if not tracking_frames_ok:' block above would have caught it
+        # if the loop exited due to !rclpy.ok() before TF was found.
+        
+        self.get_logger().info("Tracking TF confirmed. Now waiting for easy_handeye2 services...")
+        self.wait_for_services() 
 
-        if not rclpy.ok(): # Check again in case wait_for_services was interrupted
-            self.get_logger().warn("Shutdown requested while waiting for services.")
+        if not rclpy.ok(): # Check if shutdown occurred during wait_for_services
+            self.get_logger().warn("Shutdown requested while waiting for easy_handeye2 services.")
             return False
             
         self.get_logger().info("Tracking TF and easy_handeye2 services are ready.")
