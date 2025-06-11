@@ -244,7 +244,7 @@ class CalibrationOrchestrator(Node):
             try:
                 self.tf_buffer.lookup_transform(
                     self.tracking_base_frame, self.tracking_marker_frame,
-                    Time(), timeout=Duration(seconds=1.0))
+                    Time(), timeout=Duration(seconds=10.0))
                 tracking_frames_ok = True
             except tf2_ros.TransformException as ex:
                 self.get_logger().info( # Keep as info, this is a key step
