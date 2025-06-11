@@ -132,6 +132,10 @@ class CalibrationOrchestrator(Node):
         self.declare_parameter('planning_attempts', 5, ParameterDescriptor(
             type=ParameterType.PARAMETER_INTEGER,
             description='MoveIt planning attempts.'))
+        self.declare_parameter('post_move_delay_seconds', 2.0, # Default to 2 seconds
+                               ParameterDescriptor(
+                                   type=ParameterType.PARAMETER_DOUBLE,
+                                   description='Delay in seconds after each robot movement to allow for stabilization.'))
 
         # Get parameters
         self.joint_states_yaml_path = self.get_parameter(
@@ -155,6 +159,7 @@ class CalibrationOrchestrator(Node):
         planning_time_seconds = self.get_parameter(
             'planning_time_seconds').value
         planning_attempts = self.get_parameter('planning_attempts').value
+        self.post_move_delay_seconds = self.get_parameter('post_move_delay_seconds').value
 
         if not self.joint_states_yaml_path:
             self.get_logger().error(
@@ -529,9 +534,14 @@ class CalibrationOrchestrator(Node):
                     f"Failed to move to joint state {i + 1}. Skipping this pose.")
                 continue
 
-            # Allow some time for TFs to stabilize if necessary, though MoveIt `execute` is blocking.
-            rclpy.spin_once(self, timeout_sec=3.0)
-            # self.get_clock().sleep_for(rclpy.duration.Duration(seconds=0.5)) # Pythonic sleep
+            # Allow some time for TFs to stabilize if necessary.
+            if self.post_move_delay_seconds > 0:
+                self.get_logger().info(f"Pausing for {self.post_move_delay_seconds} seconds after movement...")
+                self.get_clock().sleep_for(Duration(seconds=self.post_move_delay_seconds))
+            else:
+                # Still good to have a minimal spin to process any immediate TF updates or other callbacks.
+                rclpy.spin_once(self, timeout_sec=0.1)
+
 
             current_pose_stamped = self._get_current_effector_pose_stamped()
             if current_pose_stamped is None:
