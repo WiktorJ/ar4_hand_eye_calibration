@@ -100,7 +100,7 @@ class CalibrationOrchestrator(Node):
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_STRING,
                                    description='TF frame of the camera/tracking system base.'))
-        self.declare_parameter('tracking_marker_frame', f"{_TF_PREFIX}_marker", # Example default, user should set this to the specific marker
+        self.declare_parameter('tracking_marker_frame', f"calibration_aruco",
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_STRING,
                                    description='TF frame of the calibration marker.'))
