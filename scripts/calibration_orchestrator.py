@@ -101,7 +101,7 @@ class CalibrationOrchestrator(Node):
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_DOUBLE,
                                    description='Minimum rotation (degrees) to consider movement significant.'))
-        self.declare_parameter('handeye_calibration_name', 'ar4_calibration',
+        self.declare_parameter('handeye_calibration_name', '/easy_handeye2/calibration/',
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_STRING,
                                    description='Namespace for easy_handeye2 services.'))
@@ -162,7 +162,7 @@ class CalibrationOrchestrator(Node):
 
         # Get frame names (these should match the parameters passed to MoveIt2)
         self.robot_base_frame = self.moveit2.base_link_name
-        self.robot_effector_frame = self.moveit2.end_effector_link
+        self.robot_effector_frame = self.moveit2.end_effector_name
         self.get_logger().info(
             f"MoveIt2 initialized for group '{self.move_group_name}' with base '{self.robot_base_frame}' and effector '{self.robot_effector_frame}'.")
         self.get_logger().info(
