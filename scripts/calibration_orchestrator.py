@@ -132,7 +132,7 @@ class CalibrationOrchestrator(Node):
         self.declare_parameter('planning_attempts', 5, ParameterDescriptor(
             type=ParameterType.PARAMETER_INTEGER,
             description='MoveIt planning attempts.'))
-        self.declare_parameter('post_move_delay_seconds', 2.0, # Default to 2 seconds
+        self.declare_parameter('post_move_delay_seconds', 3.0, # Increased default to 3 seconds
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_DOUBLE,
                                    description='Delay in seconds after each robot movement to allow for stabilization.'))
@@ -534,14 +534,16 @@ class CalibrationOrchestrator(Node):
                     f"Failed to move to joint state {i + 1}. Skipping this pose.")
                 continue
 
-            # Allow some time for TFs to stabilize if necessary.
+            # Allow some time for the physical system (robot, camera) and external TF publishers to stabilize.
             if self.post_move_delay_seconds > 0:
-                self.get_logger().info(f"Pausing for {self.post_move_delay_seconds} seconds after movement...")
+                self.get_logger().info(f"Pausing for {self.post_move_delay_seconds} seconds after movement for system stabilization...")
                 self.get_clock().sleep_for(Duration(seconds=self.post_move_delay_seconds))
-            else:
-                # Still good to have a minimal spin to process any immediate TF updates or other callbacks.
-                rclpy.spin_once(self, timeout_sec=0.1)
 
+            # Spin this node once to process any pending callbacks (e.g., joint_states for MoveIt2, TF updates for local buffer if used).
+            # This ensures that _get_current_effector_pose_stamped() uses the freshest possible data available to this node's context.
+            # It also provides a brief processing window that might benefit other nodes.
+            self.get_logger().debug("Spinning once after potential delay and before sampling to update internal states.")
+            rclpy.spin_once(self, timeout_sec=0.2) # A short spin, e.g., 200ms.
 
             current_pose_stamped = self._get_current_effector_pose_stamped()
             if current_pose_stamped is None:
