@@ -33,7 +33,7 @@ def generate_aruco_board(markers_x, markers_y, marker_length_pixels, marker_sepa
         dictionary=dictionary
     )
 
-    img = board.draw(outSize=image_size_pixels)
+    img = board.generateImage(image_size_pixels)
     cv2.imwrite(output_image_file, img)
     print(f"ArUco board saved to {output_image_file}")
 
@@ -79,7 +79,7 @@ def generate_charuco_board(squares_x, squares_y, square_length_pixels, marker_le
     else:
         final_image_size = image_size_pixels
 
-    img = board.draw(outSize=final_image_size)
+    img = board.generateImage(final_image_size)
     cv2.imwrite(output_image_file, img)
     print(f"ChArUco board saved to {output_image_file}")
 
