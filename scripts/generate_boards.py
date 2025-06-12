@@ -27,10 +27,9 @@ def generate_aruco_board(markers_x, markers_y, marker_length_pixels, marker_sepa
 
     dictionary = aruco.getPredefinedDictionary(aruco_dict_id)
     board = aruco.GridBoard(
-        markersX=markers_x,
-        markersY=markers_y,
-        markerLength=marker_length_pixels,
-        markerSeparation=marker_separation_pixels,
+        size=(markers_x, markers_y),
+        markerLength=float(marker_length_pixels),
+        markerSeparation=float(marker_separation_pixels),
         dictionary=dictionary
     )
 
@@ -59,10 +58,9 @@ def generate_charuco_board(squares_x, squares_y, square_length_pixels, marker_le
 
     dictionary = aruco.getPredefinedDictionary(aruco_dict_id)
     board = aruco.CharucoBoard(
-        squaresX=squares_x,
-        squaresY=squares_y,
-        squareLength=square_length_pixels,
-        markerLength=marker_length_pixels,
+        size=(squares_x, squares_y),
+        squareLength=float(square_length_pixels),
+        markerLength=float(marker_length_pixels),
         dictionary=dictionary
     )
 
