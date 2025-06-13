@@ -103,9 +103,54 @@ def generate_charuco_board(squares_x, squares_y, square_length_m, marker_length_
     print(f"ChArUco board saved to {output_image_file} ({img_width}x{img_height} pixels at {dpi} DPI)")
     print(f"  Square length: {square_length_m}m ({square_length_pixels}px), Marker length: {marker_length_m}m ({marker_length_pixels}px)")
 
+
+def generate_single_aruco_marker(marker_id, marker_length_m, dictionary_name, dpi, margin_pixels):
+    """
+    Generates a single ArUco marker image with specified physical dimensions.
+
+    Args:
+        marker_id (int): ID of the ArUco marker.
+        marker_length_m (float): Size of the marker in meters.
+        dictionary_name (str): Name of the ArUco dictionary (e.g., "DICT_6X6_250").
+        dpi (int): Dots per inch for the output image.
+        margin_pixels (int): Margin around the marker in pixels.
+    """
+    marker_length_pixels = int(marker_length_m * INCHES_PER_METER * dpi)
+
+    try:
+        aruco_dict_id = getattr(aruco, dictionary_name)
+    except AttributeError:
+        print(f"Error: ArUco dictionary '{dictionary_name}' not found. Available dictionaries can be found in cv2.aruco.DICT_*")
+        return
+
+    dictionary = aruco.getPredefinedDictionary(aruco_dict_id)
+
+    # Generate the marker itself (without margin)
+    marker_img = aruco.generateImageMarker(dictionary, marker_id, marker_length_pixels)
+
+    # Create final image with margin
+    img_width = marker_length_pixels + 2 * margin_pixels
+    img_height = marker_length_pixels + 2 * margin_pixels
+    
+    # Create a white background image
+    img = np.full((img_height, img_width), 255, dtype=np.uint8)
+    
+    # Calculate top-left position to center the marker
+    x_offset = margin_pixels
+    y_offset = margin_pixels
+    
+    # Place the marker onto the background
+    img[y_offset:y_offset+marker_length_pixels, x_offset:x_offset+marker_length_pixels] = marker_img
+
+    output_image_file = f"single_marker_id{marker_id}_{dictionary_name}_dict_{marker_length_m}len_{margin_pixels}marg_{dpi}dpi.png"
+    cv2.imwrite(output_image_file, img)
+    print(f"Single ArUco marker saved to {output_image_file} ({img_width}x{img_height} pixels at {dpi} DPI)")
+    print(f"  Marker ID: {marker_id}, Marker length: {marker_length_m}m ({marker_length_pixels}px)")
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Generate ArUco or ChArUco boards for printing with specific physical dimensions.")
-    parser.add_argument("board_type", type=str, choices=["aruco", "charuco"], help="Type of board to generate.")
+    parser = argparse.ArgumentParser(description="Generate ArUco or ChArUco boards or a single ArUco marker for printing with specific physical dimensions.")
+    parser.add_argument("board_type", type=str, choices=["aruco", "charuco", "single_aruco"], help="Type of board or marker to generate.")
     parser.add_argument("--dict", type=str, default="DICT_6X6_250", help="ArUco dictionary to use (e.g., DICT_6X6_250).")
     parser.add_argument("--dpi", type=int, default=300, help="Dots Per Inch for the output image resolution.")
     parser.add_argument("--margin_m", type=float, default=0.01, help="Margin around the board in meters (e.g., 0.01 for 1cm).")
@@ -123,6 +168,10 @@ def main():
     parser.add_argument("--square_len_m", type=float, default=0.04, help="[ChArUco] Square length in meters (e.g., 0.04 for 4cm).")
     parser.add_argument("--marker_len_m_charuco", type=float, default=0.025, help="[ChArUco] Marker length in meters (e.g., 0.025 for 2.5cm, must be smaller than square_len_m).")
 
+    # Single ArUco marker specific arguments
+    parser.add_argument("--marker_id", type=int, default=0, help="[Single ArUco] ID of the marker to generate.")
+    parser.add_argument("--marker_len_m_single", type=float, default=0.04, help="[Single ArUco] Marker length in meters (e.g., 0.04 for 4cm).")
+    
     args = parser.parse_args()
 
     margin_pixels = int(args.margin_m * INCHES_PER_METER * args.dpi)
@@ -133,6 +182,14 @@ def main():
             args.markers_y,
             args.marker_len_m_aruco,
             args.marker_sep_m,
+            args.dict,
+            args.dpi,
+            margin_pixels
+        )
+    elif args.board_type == "single_aruco":
+        generate_single_aruco_marker(
+            args.marker_id,
+            args.marker_len_m_single,
             args.dict,
             args.dpi,
             margin_pixels
