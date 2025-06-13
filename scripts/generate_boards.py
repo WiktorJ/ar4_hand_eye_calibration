@@ -8,7 +8,7 @@ import os
 
 INCHES_PER_METER = 39.3701
 
-def generate_aruco_board(markers_x, markers_y, marker_length_m, marker_separation_m, dictionary_name, output_image_file, dpi, margin_pixels):
+def generate_aruco_board(markers_x, markers_y, marker_length_m, marker_separation_m, dictionary_name, dpi, margin_pixels):
     """
     Generates an ArUco board image with specified physical dimensions.
 
@@ -18,7 +18,6 @@ def generate_aruco_board(markers_x, markers_y, marker_length_m, marker_separatio
         marker_length_m (float): Size of the markers in meters.
         marker_separation_m (float): Separation between markers in meters.
         dictionary_name (str): Name of the ArUco dictionary (e.g., "DICT_6X6_250").
-        output_image_file (str): Path to save the generated board image.
         dpi (int): Dots per inch for the output image.
         margin_pixels (int): Margin around the board in pixels.
     """
@@ -48,21 +47,13 @@ def generate_aruco_board(markers_x, markers_y, marker_length_m, marker_separatio
     image_size_pixels = (img_width, img_height)
 
     img = board.generateImage(image_size_pixels, marginSize=margin_pixels) # marginSize might need adjustment or manual padding
-    # If generateImage doesn't handle margins well, we might need to create a larger canvas and place the board image.
-    # For now, assuming generateImage can handle it or we draw on a pre-margined image.
-    # A more robust way if generateImage doesn't have margin parameter or it behaves unexpectedly:
-    # board_img_no_margin = board.generateImage((board_width_pixels, board_height_pixels))
-    # img = np.ones((img_height, img_width), dtype=np.uint8) * 255 # White background
-    # x_offset = margin_pixels
-    # y_offset = margin_pixels
-    # img[y_offset:y_offset+board_img_no_margin.shape[0], x_offset:x_offset+board_img_no_margin.shape[1]] = board_img_no_margin
-
+    output_image_file = f"{markers_x}x_{markers_y}_{dictionary_name}_dict_{marker_length_m}len_{marker_separation_m}sep_{margin_pixels}marg_{dpi}dpi.png"
     cv2.imwrite(output_image_file, img)
     print(f"ArUco board saved to {output_image_file} ({img_width}x{img_height} pixels at {dpi} DPI)")
     print(f"  Marker length: {marker_length_m}m ({marker_length_pixels}px), Separation: {marker_separation_m}m ({marker_separation_pixels}px)")
 
 
-def generate_charuco_board(squares_x, squares_y, square_length_m, marker_length_m, dictionary_name, output_image_file, dpi, margin_pixels):
+def generate_charuco_board(squares_x, squares_y, square_length_m, marker_length_m, dictionary_name, dpi, margin_pixels):
     """
     Generates a ChArUco board image with specified physical dimensions.
 
@@ -72,7 +63,6 @@ def generate_charuco_board(squares_x, squares_y, square_length_m, marker_length_
         square_length_m (float): Size of the chessboard squares in meters.
         marker_length_m (float): Size of the ArUco markers within the squares in meters.
         dictionary_name (str): Name of the ArUco dictionary (e.g., "DICT_6X6_250").
-        output_image_file (str): Path to save the generated board image.
         dpi (int): Dots per inch for the output image.
         margin_pixels (int): Margin around the board in pixels.
     """
@@ -107,13 +97,8 @@ def generate_charuco_board(squares_x, squares_y, square_length_m, marker_length_
     final_image_size = (img_width, img_height)
     
     img = board.generateImage(final_image_size, marginSize=margin_pixels, borderBits=1) # marginSize and borderBits might need adjustment
-    # Similar to ArUco, if generateImage doesn't handle margins well for Charuco:
-    # board_img_no_margin = board.generateImage((board_width_pixels, board_height_pixels))
-    # img = np.ones((img_height, img_width), dtype=np.uint8) * 255 # White background
-    # x_offset = margin_pixels
-    # y_offset = margin_pixels
-    # img[y_offset:y_offset+board_img_no_margin.shape[0], x_offset:x_offset+board_img_no_margin.shape[1]] = board_img_no_margin
 
+    output_image_file = f"{squares_x}x_{squares_y}_{dictionary_name}_dict_{square_length_m}slen_{marker_length_m}len_{margin_pixels}marg_{dpi}dpi.png"
     cv2.imwrite(output_image_file, img)
     print(f"ChArUco board saved to {output_image_file} ({img_width}x{img_height} pixels at {dpi} DPI)")
     print(f"  Square length: {square_length_m}m ({square_length_pixels}px), Marker length: {marker_length_m}m ({marker_length_pixels}px)")
@@ -121,7 +106,6 @@ def generate_charuco_board(squares_x, squares_y, square_length_m, marker_length_
 def main():
     parser = argparse.ArgumentParser(description="Generate ArUco or ChArUco boards for printing with specific physical dimensions.")
     parser.add_argument("board_type", type=str, choices=["aruco", "charuco"], help="Type of board to generate.")
-    parser.add_argument("-o", "--output", type=str, default="board.png", help="Output image file name (e.g., board.png).")
     parser.add_argument("--dict", type=str, default="DICT_6X6_250", help="ArUco dictionary to use (e.g., DICT_6X6_250).")
     parser.add_argument("--dpi", type=int, default=300, help="Dots Per Inch for the output image resolution.")
     parser.add_argument("--margin_m", type=float, default=0.01, help="Margin around the board in meters (e.g., 0.01 for 1cm).")
@@ -141,11 +125,6 @@ def main():
 
     args = parser.parse_args()
 
-    output_dir = os.path.dirname(args.output)
-    if output_dir and not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        print(f"Created output directory: {output_dir}")
-
     margin_pixels = int(args.margin_m * INCHES_PER_METER * args.dpi)
 
     if args.board_type == "aruco":
@@ -155,7 +134,6 @@ def main():
             args.marker_len_m_aruco,
             args.marker_sep_m,
             args.dict,
-            args.output,
             args.dpi,
             margin_pixels
         )
@@ -169,7 +147,6 @@ def main():
             args.square_len_m,
             args.marker_len_m_charuco,
             args.dict,
-            args.output,
             args.dpi,
             margin_pixels
         )
