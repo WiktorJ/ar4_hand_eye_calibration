@@ -47,7 +47,7 @@ def generate_aruco_board(markers_x, markers_y, marker_length_m, marker_separatio
     image_size_pixels = (img_width, img_height)
 
     img = board.generateImage(image_size_pixels, marginSize=margin_pixels) # marginSize might need adjustment or manual padding
-    output_image_file = f"{markers_x}x_{markers_y}_{dictionary_name}_dict_{marker_length_m}len_{marker_separation_m}sep_{margin_pixels}marg_{dpi}dpi.png"
+    output_image_file = f"{markers_x}x{markers_y}_{dictionary_name}_dict_{marker_length_m}len_{marker_separation_m}sep_{margin_pixels}marg_{dpi}dpi.png"
     cv2.imwrite(output_image_file, img)
     print(f"ArUco board saved to {output_image_file} ({img_width}x{img_height} pixels at {dpi} DPI)")
     print(f"  Marker length: {marker_length_m}m ({marker_length_pixels}px), Separation: {marker_separation_m}m ({marker_separation_pixels}px)")
@@ -98,7 +98,7 @@ def generate_charuco_board(squares_x, squares_y, square_length_m, marker_length_
     
     img = board.generateImage(final_image_size, marginSize=margin_pixels, borderBits=1) # marginSize and borderBits might need adjustment
 
-    output_image_file = f"{squares_x}x_{squares_y}_{dictionary_name}_dict_{square_length_m}slen_{marker_length_m}len_{margin_pixels}marg_{dpi}dpi.png"
+    output_image_file = f"{squares_x}x{squares_y}_{dictionary_name}_dict_{square_length_m}slen_{marker_length_m}len_{margin_pixels}marg_{dpi}dpi.png"
     cv2.imwrite(output_image_file, img)
     print(f"ChArUco board saved to {output_image_file} ({img_width}x{img_height} pixels at {dpi} DPI)")
     print(f"  Square length: {square_length_m}m ({square_length_pixels}px), Marker length: {marker_length_m}m ({marker_length_pixels}px)")
@@ -142,7 +142,7 @@ def generate_single_aruco_marker(marker_id, marker_length_m, dictionary_name, dp
     # Place the marker onto the background
     img[y_offset:y_offset+marker_length_pixels, x_offset:x_offset+marker_length_pixels] = marker_img
 
-    output_image_file = f"single_marker_id{marker_id}_{dictionary_name}_dict_{marker_length_m}len_{margin_pixels}marg_{dpi}dpi.png"
+    output_image_file = f"1x1_{marker_id}id_{dictionary_name}_dict_{marker_length_m}len_{margin_pixels}marg_{dpi}dpi.png"
     cv2.imwrite(output_image_file, img)
     print(f"Single ArUco marker saved to {output_image_file} ({img_width}x{img_height} pixels at {dpi} DPI)")
     print(f"  Marker ID: {marker_id}, Marker length: {marker_length_m}m ({marker_length_pixels}px)")
