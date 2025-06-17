@@ -6,6 +6,7 @@ from geometry_msgs.msg import TransformStamped
 from rclpy.node import ParameterType, ParameterDescriptor
 from ros2_aruco_interfaces.msg import ArucoMarkers
 from tf2_ros import TransformBroadcaster
+from geometry_msgs.msg import PoseStamped
 
 
 class CalibrationArucoPublisher(Node):
@@ -28,16 +29,30 @@ class CalibrationArucoPublisher(Node):
             descriptor=ParameterDescriptor(type=ParameterType.PARAMETER_STRING)
         )
         self.tracking_marker_frame = tracking_marker_frame_p.get_parameter_value().string_value
-
-        # ID of the aruco marker mounted on the robot
+        self.declare_parameter(
+            name="marker_type",
+            value="board",
+            descriptor=ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description="Type of marker to detect, 'board' or 'marker'.",
+            ),
+        )
+        self.board_type = (
+            self.get_parameter("board_type").get_parameter_value().string_value
+        )
         self.marker_id = self.declare_parameter(
             "marker_id", 1).get_parameter_value().integer_value
-
+        if self.board_type == "marker":
+            self.marker_subscription = self.create_subscription(ArucoMarkers,
+                                                                "/aruco_markers",
+                                                                self.handle_aruco_markers,
+                                                                1)
+        if self.board_type == "board":
+            self.board_subscription = self.create_subscription(PoseStamped,
+                                                               "/aruco_board_pose",
+                                                               self.handle_aruco_boards,
+                                                               1)
         self.tf_broadcaster = TransformBroadcaster(self)
-        self.subscription = self.create_subscription(ArucoMarkers,
-                                                     "/aruco_markers",
-                                                     self.handle_aruco_markers,
-                                                     1)
 
     def handle_aruco_markers(self, msg: ArucoMarkers):
         cal_marker_pose = None
@@ -58,6 +73,20 @@ class CalibrationArucoPublisher(Node):
         t.transform.translation.y = cal_marker_pose.position.y
         t.transform.translation.z = cal_marker_pose.position.z
         t.transform.rotation = cal_marker_pose.orientation
+
+        # Send the transformation
+        self.tf_broadcaster.sendTransform(t)
+
+    def handle_aruco_boards(self, msg: PoseStamped):
+        t = TransformStamped()
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = self.tracking_base_frame
+        t.child_frame_id = self.tracking_board_frame
+
+        t.transform.translation.x = msg.pose.position.x
+        t.transform.translation.y = msg.pose.position.y
+        t.transform.translation.z = msg.pose.position.z
+        t.transform.rotation = msg.pose.orientation
 
         # Send the transformation
         self.tf_broadcaster.sendTransform(t)
