@@ -37,17 +37,17 @@ class CalibrationArucoPublisher(Node):
                 description="Type of marker to detect, 'board' or 'marker'.",
             ),
         )
-        self.board_type = (
-            self.get_parameter("board_type").get_parameter_value().string_value
+        self.marker_type = (
+            self.get_parameter("marker_type").get_parameter_value().string_value
         )
         self.marker_id = self.declare_parameter(
             "marker_id", 1).get_parameter_value().integer_value
-        if self.board_type == "marker":
+        if self.marker_type == "marker":
             self.marker_subscription = self.create_subscription(ArucoMarkers,
                                                                 "/aruco_markers",
                                                                 self.handle_aruco_markers,
                                                                 1)
-        if self.board_type == "board":
+        if self.marker_type == "board":
             self.board_subscription = self.create_subscription(PoseStamped,
                                                                "/aruco_board_pose",
                                                                self.handle_aruco_boards,

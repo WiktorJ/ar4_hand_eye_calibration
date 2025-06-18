@@ -21,4 +21,3 @@ joint_states_degrees:
   - [-25, 23, 40, 103, 90, -16]
   - [-30, 20, -35, 111, 85, 8]
   - [-29, 25, -50, 105, 80, 11]
-  # Add more diverse poses for good calibration
