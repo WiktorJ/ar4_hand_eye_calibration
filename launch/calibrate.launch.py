@@ -62,13 +62,21 @@ def generate_launch_description():
         ar_moveit_launch, launch_arguments=ar_moveit_args
     )
 
+    # aruco_params = os.path.join(
+    #     current_pkg_dir,
+    #     "config",
+    #     "aruco_parameters.yaml",
+    # )
+    # aruco_recognition_node = Node(
+    #     package="ros2_aruco", executable="aruco_node", parameters=[aruco_params]
+    # )
     aruco_params = os.path.join(
         current_pkg_dir,
         "config",
-        "aruco_parameters.yaml",
+        "aruco_board_parameters.yaml",
     )
     aruco_recognition_node = Node(
-        package="ros2_aruco", executable="aruco_node", parameters=[aruco_params]
+        package="ros2_aruco", executable="aruco_board_node", parameters=[aruco_params]
     )
 
     handeye_calibration_name = "ar4_calibration" # Consistent name
