@@ -110,11 +110,11 @@ class CalibrationOrchestrator(Node):
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_STRING,
                                    description='TF frame of the calibration marker.'))
-        self.declare_parameter('min_translation_threshold_m', 0.01,
+        self.declare_parameter('min_translation_threshold_m', 0.005,
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_DOUBLE,
                                    description='Minimum translation (meters) to consider movement significant for taking a sample.'))
-        self.declare_parameter('min_rotation_threshold_deg', 5.0,
+        self.declare_parameter('min_rotation_threshold_deg', 2.0,
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_DOUBLE,
                                    description='Minimum rotation (degrees) to consider movement significant.'))

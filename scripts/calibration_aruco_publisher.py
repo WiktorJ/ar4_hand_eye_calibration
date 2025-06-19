@@ -81,7 +81,7 @@ class CalibrationArucoPublisher(Node):
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
         t.header.frame_id = self.tracking_base_frame
-        t.child_frame_id = self.tracking_board_frame
+        t.child_frame_id = self.tracking_marker_frame
 
         t.transform.translation.x = msg.pose.position.x
         t.transform.translation.y = msg.pose.position.y
