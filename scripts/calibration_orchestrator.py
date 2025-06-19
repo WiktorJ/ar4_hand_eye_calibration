@@ -132,7 +132,7 @@ class CalibrationOrchestrator(Node):
         self.declare_parameter('planning_attempts', 5, ParameterDescriptor(
             type=ParameterType.PARAMETER_INTEGER,
             description='MoveIt planning attempts.'))
-        self.declare_parameter('post_move_delay_seconds', 3.0, # Increased default to 3 seconds
+        self.declare_parameter('post_move_delay_seconds', 5.0,
                                ParameterDescriptor(
                                    type=ParameterType.PARAMETER_DOUBLE,
                                    description='Delay in seconds after each robot movement to allow for stabilization.'))
