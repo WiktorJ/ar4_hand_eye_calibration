@@ -135,6 +135,7 @@ class ArucoMarkerFollower(Node):
 
     def handle_aruco_board_pose(self, msg):
         """Handle incoming ArUco marker detections"""
+        # add more comprehensive inline docs ai!
 
         cal_marker_pose = msg.pose
         # Check if marker has moved enough

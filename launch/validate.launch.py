@@ -42,13 +42,22 @@ def generate_launch_description():
         }.items()
     )
 
+    # aruco_params = os.path.join(
+    #     get_package_share_directory("ar4_hand_eye_calibration"),
+    #     "config",
+    #     "aruco_parameters.yaml",
+    # )
+    # aruco_recognition_node = Node(
+    #     package="ros2_aruco", executable="aruco_node", parameters=[aruco_params]
+    # )
+
     aruco_params = os.path.join(
-        get_package_share_directory("ar4_hand_eye_calibration"),
+         get_package_share_directory("ar4_hand_eye_calibration"),
         "config",
-        "aruco_parameters.yaml",
+        "aruco_board_parameters.yaml",
     )
     aruco_recognition_node = Node(
-        package="ros2_aruco", executable="aruco_node", parameters=[aruco_params]
+        package="ros2_aruco", executable="aruco_board_node", parameters=[aruco_params]
     )
 
     hand_eye_tf_publisher = Node(
@@ -58,10 +67,16 @@ def generate_launch_description():
         parameters=[{"calibration_name": "ar4_calibration"}],
     )
 
+    # follow_aruco_node = Node(
+    #     package="ar4_hand_eye_calibration",
+    #     executable="follow_aruco_marker.py",
+    #     name="follow_aruco_marker",
+    #     output="screen",
+    # )
     follow_aruco_node = Node(
         package="ar4_hand_eye_calibration",
-        executable="follow_aruco_marker.py",
-        name="follow_aruco_marker",
+        executable="follow_aruco_board.py",
+        name="follow_aruco_board",
         output="screen",
     )
 
