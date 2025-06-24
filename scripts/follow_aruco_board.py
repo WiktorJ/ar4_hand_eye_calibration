@@ -21,9 +21,9 @@ from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 _TF_PREFIX = 'camera'
 
 
-class ArucoMarkerFollower(Node):
+class ArucoBoardFollower(Node):
     def __init__(self):
-        super().__init__("follow_aruco_marker")
+        super().__init__("follow_aruco_board")
         self.logger = self.get_logger()
 
         # Create TF buffer and listener
@@ -205,7 +205,7 @@ class ArucoMarkerFollower(Node):
 
 def main():
     rclpy.init()
-    node = ArucoMarkerFollower()
+    node = ArucoBoardFollower()
 
     try:
         rclpy.spin(node)
