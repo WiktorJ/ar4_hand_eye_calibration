@@ -2,6 +2,7 @@
 """
 A simplified version of the ArUco marker follower that separates marker detection from movement.
 """
+
 import rclpy
 from rclpy.node import Node
 import threading
@@ -18,7 +19,7 @@ from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 
 # This is hard-coded because .rviz configs are not configurable and also have this prefix hard-coded
-_TF_PREFIX = 'camera'
+_TF_PREFIX = "camera"
 
 
 class ArucoBoardFollower(Node):
@@ -39,10 +40,7 @@ class ArucoBoardFollower(Node):
 
         # Create subscription to the ArUco markers
         self.subscription = self.create_subscription(
-            ArucoMarkers,
-            "/aruco_board_pose",
-            self.handle_aruco_board_pose,
-            10
+            ArucoMarkers, "/aruco_board_pose", self.handle_aruco_board_pose, 10
         )
 
         # State variables
@@ -54,18 +52,21 @@ class ArucoBoardFollower(Node):
         self.create_timer(5.0, self.log_status)
 
         # Create a separate thread for movement
-        self.executor_thread = threading.Thread(target=self.movement_thread,
-                                                daemon=True)
+        self.executor_thread = threading.Thread(
+            target=self.movement_thread, daemon=True
+        )
         self.executor_thread.start()
         self.arm_joint_names = [
-            f"{_TF_PREFIX}joint_1", f"{_TF_PREFIX}joint_2",
-            f"{_TF_PREFIX}joint_3", f"{_TF_PREFIX}joint_4",
-            f"{_TF_PREFIX}joint_5", f"{_TF_PREFIX}joint_6"
+            f"{_TF_PREFIX}joint_1",
+            f"{_TF_PREFIX}joint_2",
+            f"{_TF_PREFIX}joint_3",
+            f"{_TF_PREFIX}joint_4",
+            f"{_TF_PREFIX}joint_5",
+            f"{_TF_PREFIX}joint_6",
         ]
         self.base_link = f"{_TF_PREFIX}base_link"
         self.ee_link = f"{_TF_PREFIX}ee_link"
         self.link_6 = f"{_TF_PREFIX}link_6"
-        self.marker_id = 1
         self.marker_frame = f"aruco_marker_{self.marker_id}"
 
         self.logger.info("ArucoMarkerFollower node initialized")
@@ -73,8 +74,8 @@ class ArucoBoardFollower(Node):
     def log_status(self):
         """Log current status"""
         self.logger.info(
-            f"Is moving: {self.is_moving}, Queue size: {self.pose_queue.qsize()}")
-        self.logger.info(f"Waiting for ArUco marker with ID: {self.marker_id}")
+            f"Is moving: {self.is_moving}, Queue size: {self.pose_queue.qsize()}"
+        )
 
     def movement_thread(self):
         """Thread for executing robot movements"""
@@ -100,7 +101,8 @@ class ArucoBoardFollower(Node):
 
             # Spin in a separate thread
             spin_thread = threading.Thread(
-                target=lambda: moveit_executor.spin(), daemon=True)
+                target=lambda: moveit_executor.spin(), daemon=True
+            )
             spin_thread.start()
 
             # Process movement requests
@@ -113,7 +115,8 @@ class ArucoBoardFollower(Node):
 
                         # Execute movement
                         self.logger.info(
-                            f"Processing movement to {pose.position.x:.3f}, {pose.position.y:.3f}, {pose.position.z:.3f}")
+                            f"Processing movement to {pose.position.x:.3f}, {pose.position.y:.3f}, {pose.position.z:.3f}"
+                        )
 
                         pose_goal = PoseStamped()
                         pose_goal.header.frame_id = self.base_link
@@ -140,17 +143,16 @@ class ArucoBoardFollower(Node):
         cal_marker_pose = msg.pose
         # Check if marker has moved enough
         if self._prev_marker_pose is not None:
-            dist_squared = ((
-                                    cal_marker_pose.position.x - self._prev_marker_pose.position.x) ** 2 +
-                            (
-                                    cal_marker_pose.position.y - self._prev_marker_pose.position.y) ** 2 +
-                            (
-                                    cal_marker_pose.position.z - self._prev_marker_pose.position.z) ** 2)
+            dist_squared = (
+                (cal_marker_pose.position.x - self._prev_marker_pose.position.x) ** 2
+                + (cal_marker_pose.position.y - self._prev_marker_pose.position.y) ** 2
+                + (cal_marker_pose.position.z - self._prev_marker_pose.position.z) ** 2
+            )
 
-            if dist_squared < 0.02 ** 2:
+            if dist_squared < 0.02**2:
                 self.logger.info("Marker hasn't moved enough, skipping")
                 return
-            self.logger.info(f"Marker moved {dist_squared ** 0.5:.3f}m")
+            self.logger.info(f"Marker moved {dist_squared**0.5:.3f}m")
 
         # Update previous marker pose
         self._prev_marker_pose = Pose()
@@ -162,9 +164,7 @@ class ArucoBoardFollower(Node):
         # Transform pose
         try:
             transform = self.tf_buffer.lookup_transform(
-                self.base_link,
-                "camera_color_optical_frame",
-                rclpy.time.Time()
+                self.base_link, "camera_color_optical_frame", rclpy.time.Time()
             )
 
             # Transform the pose
@@ -195,7 +195,8 @@ class ArucoBoardFollower(Node):
             if not self.is_moving:
                 self.pose_queue.put(target_pose)
                 self.logger.info(
-                    f"Added pose to queue. Queue size: {self.pose_queue.qsize()}")
+                    f"Added pose to queue. Queue size: {self.pose_queue.qsize()}"
+                )
 
         except tf2_ros.LookupException as e:
             self.logger.error(f"Transform error: {e}")
