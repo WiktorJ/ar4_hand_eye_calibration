@@ -16,7 +16,9 @@ def load_yaml(package_name, file_name):
         return yaml.safe_load(file)
 
 
-_TF_PREFIX = 'camera'
+_TF_PREFIX = "camera"
+
+
 def generate_launch_description():
     ar_model_config = LaunchConfiguration("ar_model")
     ar_model_arg = DeclareLaunchArgument(
@@ -36,10 +38,7 @@ def generate_launch_description():
                 )
             ]
         ),
-        launch_arguments={
-            'rs_compat': "true",
-            'name': _TF_PREFIX
-        }.items()
+        launch_arguments={"rs_compat": "true", "name": _TF_PREFIX}.items(),
     )
 
     # aruco_params = os.path.join(
@@ -52,7 +51,7 @@ def generate_launch_description():
     # )
 
     aruco_params = os.path.join(
-         get_package_share_directory("ar4_hand_eye_calibration"),
+        get_package_share_directory("ar4_hand_eye_calibration"),
         "config",
         "aruco_board_parameters.yaml",
     )
@@ -90,8 +89,7 @@ def generate_launch_description():
         ]
     )
     rviz_config_file = os.path.join(
-        get_package_share_directory("ar4_hand_eye_calibration"), "rviz",
-        "validate.rviz"
+        get_package_share_directory("ar4_hand_eye_calibration"), "rviz", "validate.rviz"
     )
     ar_moveit_args = {
         "include_gripper": "False",

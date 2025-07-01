@@ -40,7 +40,7 @@ class ArucoBoardFollower(Node):
 
         # Create subscription to the ArUco markers
         self.subscription = self.create_subscription(
-            ArucoMarkers, "/aruco_board_pose", self.handle_aruco_board_pose, 10
+            PoseStamped, "/aruco_board_pose", self.handle_aruco_board_pose, 10
         )
 
         # State variables
@@ -67,7 +67,6 @@ class ArucoBoardFollower(Node):
         self.base_link = f"{_TF_PREFIX}base_link"
         self.ee_link = f"{_TF_PREFIX}ee_link"
         self.link_6 = f"{_TF_PREFIX}link_6"
-        self.marker_frame = f"aruco_marker_{self.marker_id}"
 
         self.logger.info("ArucoMarkerFollower node initialized")
 
