@@ -4,26 +4,7 @@ Performs hand-eye calibration between a camera and the Annin Robotics AR4 roboti
 and validates calibration results. An DepthAI camera is used as an example,
 but any camera can be substituted. Tested with ROS 2 Jazzy on Ubuntu 24.
 
-[![Hand-Eye Calibration Demo](http://img.youtube.com/vi/w3tWKYnLL98/0.jpg)](https://youtu.be/w3tWKYnLL98)
-
-The core calibration procedure uses [easy_handeye2](https://github.com/marcoesposito1988/easy_handeye2).
-
-## Preparation
-
-Print an Aruco marker and attach it to the end of J6. Aruco marker can be printed using
-[ros2_aruco](https://github.com/JMU-ROBOTICS-VIVA/ros2_aruco?tab=readme-ov-file#generating-marker-images).
-
-Note that the marker needs to be aligned with `ee_link` as shown in the picture below.
-Aruco marker pose can be visualized using `ros2 run ar4_hand_eye_calibration visualize_aruco_marker.py` (first run
-`ros2 launch depthai_ros_driver camera.launch.py rs_compat:=true` to start the camera and then run
-`ros2 run image_view image_view  image:=/aruco_image` in another terminal to see the image).
-
-![aruco_marker_alignment](./resources/aruco_marker_alignment.png)
-
-Verify that the Aruco marker parameters in `config/aruco_parameters.yaml` is correct for
-your marker.
-
-Note: You may want to 3D print an extra J6 gripper mount for this purpose.
+The core calibration procedure uses [easy_handeye2](https://github.com/WiktorJ/easy_handeye2).
 
 ## Installation
 
